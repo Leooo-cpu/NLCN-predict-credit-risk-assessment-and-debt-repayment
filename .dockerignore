@@ -1,0 +1,10 @@
+**/__pycache__
+**/.venv
+**/venv
+**/node_modules
+**/.pytest_cache
+**/*.db
+.git
+frontend/dist
+ml-service/artifacts/*.joblib
+ml-service/artifacts/plots

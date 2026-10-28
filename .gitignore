@@ -1,0 +1,62 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv/
+venv/
+env/
+ENV/
+*.egg-info/
+.eggs/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+*.log
+
+# Node
+node_modules/
+dist/
+dist-ssr/
+.vite/
+*.local
+npm-debug.log*
+
+# Env & secrets
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# ML artifacts (keep directory, ignore large binaries except committed demo model)
+ml-service/artifacts/*.pkl
+ml-service/artifacts/*.joblib
+ml-service/artifacts/plots/
+ml-service/data/raw/
+ml-service/data/processed/
+!ml-service/artifacts/.gitkeep
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Docker
+docker-data/
+
+# Coverage / reports
+reports/
+backend/.coverage
+ml-service/.coverage

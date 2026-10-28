@@ -1,0 +1,4 @@
+customer_id,requested_amount,term_months,purpose,monthly_income,years_employed,current_debt,existing_loans,credit_history,late_payments
+1,80000000,36,MUA_XE,28000000,6,45000000,1,GOOD,0
+2,40000000,18,TIEU_DUNG,12000000,3,80000000,2,FAIR,2
+3,30000000,12,HOP_TAC_KINH_DOANH,9000000,1.5,110000000,3,POOR,6

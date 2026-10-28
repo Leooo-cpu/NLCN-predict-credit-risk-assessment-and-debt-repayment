@@ -1,0 +1,97 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: credit-risk-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-credit_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-credit_password_demo}
+      POSTGRES_DB: ${POSTGRES_DB:-credit_risk}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/init.sql:/docker-entrypoint-initdb.d/01_init.sql:ro
+      - ./database/seed.sql:/docker-entrypoint-initdb.d/02_seed.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-credit_user} -d ${POSTGRES_DB:-credit_risk}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  ml-service:
+    build:
+      context: ./ml-service
+      dockerfile: Dockerfile
+    container_name: credit-risk-ml
+    restart: unless-stopped
+    environment:
+      ML_SERVICE_HOST: 0.0.0.0
+      ML_SERVICE_PORT: 8001
+      LOW_RISK_THRESHOLD: ${LOW_RISK_THRESHOLD:-0.20}
+      MEDIUM_RISK_THRESHOLD: ${MEDIUM_RISK_THRESHOLD:-0.45}
+      CREDIT_SCORE_MAX: ${CREDIT_SCORE_MAX:-850}
+      CREDIT_SCORE_RANGE: ${CREDIT_SCORE_RANGE:-550}
+      ARTIFACT_DIR: /app/artifacts
+    ports:
+      - "${ML_SERVICE_PORT:-8001}:8001"
+    volumes:
+      - ml_artifacts:/app/artifacts
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8001/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+      start_period: 40s
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: credit-risk-backend
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: ${DATABASE_URL:-postgresql+psycopg2://credit_user:credit_password_demo@postgres:5432/credit_risk}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:-change-this-demo-secret-key-not-for-production}
+      JWT_ALGORITHM: ${JWT_ALGORITHM:-HS256}
+      JWT_ACCESS_TOKEN_EXPIRE_MINUTES: ${JWT_ACCESS_TOKEN_EXPIRE_MINUTES:-480}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000,http://localhost:5173}
+      ML_SERVICE_URL: ${ML_SERVICE_URL:-http://ml-service:8001}
+      LOW_RISK_THRESHOLD: ${LOW_RISK_THRESHOLD:-0.20}
+      MEDIUM_RISK_THRESHOLD: ${MEDIUM_RISK_THRESHOLD:-0.45}
+      CREDIT_SCORE_MAX: ${CREDIT_SCORE_MAX:-850}
+      CREDIT_SCORE_RANGE: ${CREDIT_SCORE_RANGE:-550}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@credit-risk.com}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-Admin@123456}
+      ADMIN_FULL_NAME: ${ADMIN_FULL_NAME:-Quản trị hệ thống}
+      SEED_ON_STARTUP: "true"
+    ports:
+      - "${BACKEND_PORT:-8000}:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      ml-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://localhost:8000}
+    container_name: credit-risk-frontend
+    restart: unless-stopped
+    ports:
+      - "${FRONTEND_PORT:-3000}:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
+  ml_artifacts:
