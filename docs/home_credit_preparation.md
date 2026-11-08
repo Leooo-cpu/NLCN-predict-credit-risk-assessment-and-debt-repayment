@@ -1,5 +1,9 @@
 # Chuẩn bị dữ liệu Home Credit Default Risk
 
+> Tài liệu và audit này ghi nhận bước Prompt 1. Prompt 2 bổ sung CV ba mô hình trên
+> Training và chuyển mẫu thử tiền xử lý sang Training sau khi tách Test; xem
+> [quy trình CV](home_credit_training_cv.md). Báo cáo audit Prompt 1 được giữ nguyên.
+
 ## Phạm vi và nguồn
 
 Repo được tìm thấy tại `D:/HK1_nam_4/CT250H_nien_luan_chuyen_nganh/NLCN-predict-credit-risk-assessment-and-debt-repayment`.

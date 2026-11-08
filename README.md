@@ -136,6 +136,15 @@ python -m pytest
 
 ## 7. Chuẩn bị Home Credit (chưa huấn luyện mô hình)
 
+Prompt 2 đã bổ sung luồng so sánh Logistic Regression, Random Forest và XGBoost
+bằng 5-fold trên 80% Training; refit và đánh giá 20% Test được tách thành các hàm
+riêng. Mặc định vẫn chỉ chuẩn bị dữ liệu. Xem [quy trình CV và kiểm tra dữ liệu nhỏ](docs/home_credit_training_cv.md).
+
+```powershell
+# Kiểm tra 15 lượt CV bằng 150 dòng nhân tạo; không đọc CSV thật hay đánh giá Test thật.
+& './ml-service/.venv/Scripts/python.exe' ml-service/training/train.py --mode cv-smoke --sample-size 150
+```
+
 ```bash
 cd ml-service
 python training/train.py
