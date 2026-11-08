@@ -1,5 +1,12 @@
 # Mô tả API
 
+## Luồng khách hàng hiện tại
+
+Giao diện chính dùng `/api/credit-cases`: danh sách/chi tiết hồ sơ Home Credit, cập nhật
+đầu vào theo revision, dự đoán và lưu snapshot/lịch sử theo hồ sơ. Dataset 307511 dòng
+đã thay demo mô phỏng sau backup. Xem [API và cách dùng hiện tại](home_credit_customer_flow.md).
+Các API customer/loan legacy bên dưới giữ để tương thích, không được giao diện chính sử dụng.
+
 Base URL backend: `http://localhost:8000`  
 Swagger: `http://localhost:8000/docs`
 

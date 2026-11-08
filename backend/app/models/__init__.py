@@ -4,6 +4,7 @@ from app.models.loan_application import LoanApplication
 from app.models.model_prediction import ModelPrediction
 from app.models.model_registry import ModelRegistry
 from app.models.user import User
+from app.models.credit_case import CreditCase, CreditPrediction
 
 __all__ = [
     "AuditLog",
@@ -12,4 +13,6 @@ __all__ = [
     "ModelPrediction",
     "ModelRegistry",
     "User",
+    "CreditCase",
+    "CreditPrediction",
 ]

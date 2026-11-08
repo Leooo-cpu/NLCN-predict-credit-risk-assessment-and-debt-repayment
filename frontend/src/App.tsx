@@ -3,17 +3,14 @@ import { Navigate, Route, Routes } from "react-router-dom";
 import { useAuth } from "./auth/AuthContext";
 import { Layout } from "./components/Layout";
 import { Loading } from "./components/Loading";
-import { CustomersPage } from "./pages/CustomersPage";
-import { DashboardPage } from "./pages/DashboardPage";
-import { LoanDetailPage } from "./pages/LoanDetailPage";
-import { LoanFormPage } from "./pages/LoanFormPage";
-import { LoansPage } from "./pages/LoansPage";
 import { LoginPage } from "./pages/LoginPage";
 import { ModelsPage } from "./pages/ModelsPage";
-import { PredictionHistoryPage } from "./pages/PredictionHistoryPage";
-import { RiskAssessmentResultPage } from "./pages/RiskAssessmentResultPage";
 import { UsersPage } from "./pages/UsersPage";
-import { HomeCreditPage } from "./pages/HomeCreditPage";
+import { CreditCaseListPage } from "./pages/CreditCaseListPage";
+import { CreditCaseDetailPage, CreditCaseCreatePage } from "./pages/CreditCaseDetailPage";
+import { CreditCaseHistoryPage } from "./pages/CreditCaseHistoryPage";
+import { CreditDashboardPage } from "./pages/CreditDashboardPage";
+import { CreditAssessmentPage } from "./pages/CreditAssessmentPage";
 
 function Private({ children }: { children: ReactElement }) {
   const { user, loading } = useAuth();
@@ -47,27 +44,30 @@ export default function App() {
           </Private>
         }
       >
-        <Route index element={<DashboardPage />} />
-        <Route path="customers" element={<CustomersPage />} />
-        <Route path="loans" element={<LoansPage />} />
+        <Route index element={<CreditDashboardPage />} />
+        <Route path="customers" element={<CreditCaseListPage />} />
+        <Route path="customers/new" element={<WriterOnly><CreditCaseCreatePage /></WriterOnly>} />
+        <Route path="customers/:id" element={<CreditCaseDetailPage mode="customers" />} />
+        <Route path="loans" element={<CreditCaseListPage key="loans" mode="loans" />} />
         <Route
           path="loans/new"
           element={
             <WriterOnly>
-              <LoanFormPage />
+              <Navigate to="/customers/new" replace />
             </WriterOnly>
           }
         />
-        <Route path="loans/:id" element={<LoanDetailPage />} />
-        <Route path="loans/:id/result" element={<RiskAssessmentResultPage />} />
-        <Route path="risk-assessment" element={<WriterOnly><HomeCreditPage /></WriterOnly>} />
-        <Route path="home-credit" element={<WriterOnly><HomeCreditPage /></WriterOnly>} />
-        <Route path="predictions" element={<PredictionHistoryPage />} />
+        <Route path="loans/:id" element={<CreditCaseDetailPage />} />
+        <Route path="loans/:id/result" element={<CreditCaseDetailPage />} />
+        <Route path="risk-assessment" element={<WriterOnly><CreditAssessmentPage /></WriterOnly>} />
+        <Route path="risk-assessment/:id" element={<WriterOnly><CreditCaseDetailPage mode="assessment" /></WriterOnly>} />
+        <Route path="home-credit" element={<Navigate to="/customers" replace />} />
+        <Route path="predictions" element={<CreditCaseHistoryPage />} />
         <Route
           path="loans/:id/edit"
           element={
             <WriterOnly>
-              <LoanFormPage />
+              <CreditCaseDetailPage mode="assessment" />
             </WriterOnly>
           }
         />

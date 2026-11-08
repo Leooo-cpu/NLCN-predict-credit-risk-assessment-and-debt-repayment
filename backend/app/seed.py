@@ -200,5 +200,5 @@ def ensure_demo_records(db: Session, officer: User) -> None:
 def seed_if_needed(db: Session) -> None:
     users = ensure_default_users(db)
     officer = next((u for u in users if u.role == "CREDIT_OFFICER"), users[0])
-    ensure_model_registry(db)
-    ensure_demo_records(db, officer)
+    # Keep accounts, but never recreate synthetic customers/results after replacement.
+    # Home Credit records are imported explicitly from the real labeled CSV.

@@ -22,11 +22,11 @@ export function Layout() {
             Khách hàng
           </NavLink>
           <NavLink to="/loans" className={linkClass}>
-            Hồ sơ vay
+            Hồ sơ và dự đoán
           </NavLink>
-          <NavLink to="/risk-assessment" className={linkClass}>
-            Home Credit
-          </NavLink>
+          {user?.role !== "RISK_VIEWER" && <NavLink to="/risk-assessment" className={linkClass}>
+            Đánh giá rủi ro
+          </NavLink>}
           <NavLink to="/predictions" className={linkClass}>
             Lịch sử dự đoán
           </NavLink>

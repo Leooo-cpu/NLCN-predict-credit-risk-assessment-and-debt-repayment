@@ -10,7 +10,7 @@ export function LoginPage() {
   const toast = useToast();
   const navigate = useNavigate();
   const [mode, setMode] = useState<"login" | "register">("login");
-  const [email, setEmail] = useState("officer@credit-risk.local");
+  const [email, setEmail] = useState("officer@credit-risk.com");
   const [password, setPassword] = useState("Officer@123456");
   const [fullName, setFullName] = useState("");
   const [role, setRole] = useState<Role>("CREDIT_OFFICER");
@@ -43,7 +43,7 @@ export function LoginPage() {
       <form onSubmit={onSubmit} className="card w-full max-w-md space-y-4">
         <div>
           <h1 className="text-xl font-semibold">Hỗ trợ đánh giá rủi ro tín dụng</h1>
-          <p className="text-sm text-slate-500">Niên luận KTPM · Dữ liệu mô phỏng</p>
+          <p className="text-sm text-slate-500">Niên luận KTPM · Hồ sơ và mô hình Home Credit</p>
         </div>
         {mode === "register" && (
           <>
@@ -64,7 +64,7 @@ export function LoginPage() {
           {mode === "login" ? "Chưa có tài khoản? Đăng ký" : "Đã có tài khoản? Đăng nhập"}
         </button>
         <p className="text-xs text-slate-500">
-          Demo: admin@credit-risk.local / Admin@123456 · officer@credit-risk.local / Officer@123456 · viewer@credit-risk.local / Viewer@123456
+          Cán bộ: officer@credit-risk.com / Officer@123456 · Người xem: viewer@credit-risk.com / Viewer@123456
         </p>
       </form>
     </div>

@@ -1,5 +1,11 @@
 # Home Credit v1 — kết quả thật và tích hợp dự đoán
 
+> **Cập nhật luồng sử dụng:** Theo yêu cầu tiếp theo, dữ liệu demo trong database đã được
+> sao lưu/xóa và thay bằng 307511 hồ sơ Home Credit. Dự đoán đã gắn hồ sơ, lưu snapshot
+> và lịch sử. Mô hình và kết quả CV/Test bên dưới không đổi. Xem
+> [luồng khách hàng hiện tại](home_credit_customer_flow.md); mô tả demo tách rời bên dưới
+> là trạng thái lịch sử của bước huấn luyện trước.
+
 Phiên bản: **home-credit-v1-20261108**. Đã đọc CSV thật, chạy đủ 15 lượt CV,
 refit XGBoost trên toàn bộ Training, đánh giá Test một lần, reload và kiểm tra API
 trước khi kích hoạt manifest. Không thay nguồn hoặc nội dung kết quả mô phỏng cũ.

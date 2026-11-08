@@ -57,3 +57,9 @@ def predict_endpoint(payload: PredictRequest):
         return predict(payload)
     except Exception as exc:  # noqa: BLE001
         raise HTTPException(status_code=500, detail=f"Lỗi dự đoán: {exc}") from exc
+
+
+@app.post("/validate")
+def validate_inputs(payload: PredictRequest):
+    from app.home_credit_features import CONTRACT_VERSION
+    return {"inputs": payload.model_dump(), "contract_version": CONTRACT_VERSION}

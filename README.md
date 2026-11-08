@@ -4,7 +4,11 @@
 Hệ thống **hỗ trợ** cán bộ tín dụng ước lượng rủi ro gặp khó khăn thanh toán theo Home Credit bằng Machine Learning, **không** thay thế quyết định cấp tín dụng thực tế và **không** kết nối ngân hàng thật. Hồ sơ và giải thích SHAP mô phỏng cũ được giữ để xem lịch sử.
 
 > **Cảnh báo bắt buộc:** Kết quả chỉ mang tính hỗ trợ đánh giá rủi ro, không thay thế quyết định cấp tín dụng thực tế.  
-> **Nguồn dữ liệu:** Mô hình đang phục vụ là Home Credit `home-credit-v1-20261108`, đã kiểm tra tải lại và API. Hồ sơ, kết quả và metadata demo cũ vẫn giữ nguồn mô phỏng. Xem [kết quả huấn luyện và tích hợp](docs/home_credit_release.md).
+> **Nguồn dữ liệu:** Mô hình đang phục vụ là Home Credit `home-credit-v1-20261108`. Theo yêu cầu thay demo cũ, đã sao lưu rồi xóa 6 hồ sơ mô phỏng, nạp toàn bộ **307511 hồ sơ Home Credit** vào PostgreSQL. Có thể mở từng hồ sơ, dự đoán và lưu lịch sử. Xem [cách dùng và kết quả kiểm tra](docs/home_credit_customer_flow.md).
+
+**Sử dụng ngay:** `http://localhost:3000/customers` → chọn hồ sơ → **Dự đoán và lưu kết quả**.
+CSV không có họ tên thật nên danh sách dùng mã hồ sơ ẩn danh. TARGET gốc hiển thị riêng,
+không gửi vào mô hình. Dữ liệu đã ở volume Docker; không cần import/huấn luyện lại mỗi lần mở app.
 
 ---
 
@@ -79,11 +83,12 @@ cp .env.example .env
 docker compose up --build
 ```
 
+Đã kiểm tra chạy thực tế trên Docker Desktop: PostgreSQL, backend, ML Service và frontend.
 ML Service cần `active_model.json` và thư mục phiên bản Home Credit tương ứng trong
 volume `ml_artifacts`. Binary mô hình được lưu cục bộ và Git bỏ qua. Với volume cũ,
 phải sao chép bản phiên bản đã xác minh cùng manifest vào volume hoặc huấn luyện và
-kích hoạt trong môi trường đó. Không tự huấn luyện lúc khởi động. Docker chưa được
-kiểm tra trên máy hiện tại vì không có lệnh Docker.
+kích hoạt trong môi trường đó. Không tự huấn luyện lúc khởi động. Khi cần thay dữ liệu
+mô phỏng, dùng importer có backup trong [hướng dẫn hồ sơ khách hàng](docs/home_credit_customer_flow.md).
 
 **Các cổng truy cập:**
 - **Frontend App:** [http://localhost:3000](http://localhost:3000)
@@ -186,9 +191,8 @@ Kết quả thật và giới hạn: [Home Credit release](docs/home_credit_rele
 2. **Dashboard:** Xem thống kê hồ sơ, biểu đồ tròn phân bố rủi ro, phân bố điểm tín dụng mô phỏng.
 3. **Quản lý khách hàng:** Vào menu **Khách hàng**, bấm xem hoặc tạo mới khách hàng mẫu.
 4. **Hồ sơ vay:** Vào menu **Hồ sơ vay**, bấm **Import CSV** chọn tệp `database/sample_loan_import.csv` để nạp dữ liệu nhanh.
-5. **Home Credit:** Mở menu Home Credit, nạp hồ sơ mẫu từ Training hoặc bổ sung 6 trường
-   theo hợp đồng. Không mặc định số tiền là VND. Xem ước lượng TARGET=1, lớp ở ngưỡng
-   0,5 và nguồn/phiên bản mô hình. Không có SHAP giả hoặc tự gán nhóm rủi ro cũ.
-   Các trang kết quả hồ sơ cũ chỉ xem lịch sử mô phỏng.
+5. **Dự đoán theo khách hàng:** Vào Khách hàng hoặc Hồ sơ và dự đoán, chọn hồ sơ Home Credit,
+   kiểm tra 6 đầu vào, bấm Dự đoán và lưu kết quả. Mỗi lần lưu gắn đúng hồ sơ, snapshot đầu
+   vào và phiên bản mô hình; mở Lịch sử dự đoán để xem lại. Không mặc định số tiền là VND.
 6. **Lịch sử dự đoán:** Vào menu **Lịch sử dự đoán**, lọc theo nhóm rủi ro, mở modal xem chi tiết SHAP của các lượt đánh giá cũ.
 7. **Phân quyền:** Đăng xuất và đăng nhập tài khoản `admin@credit-risk.com` / `Admin@123456` để kiểm tra trang **Người dùng** và **Mô hình**.
