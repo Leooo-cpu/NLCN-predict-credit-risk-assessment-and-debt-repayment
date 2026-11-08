@@ -1,80 +1,238 @@
-import { FormEvent, useEffect, useState } from "react";
-import { api, errorMessage } from "../api/client";
-import { useToast } from "./Toast";
+import { Loading } from "./Loading";
+import { ErrorState, FormField } from "./UI";
+import { useCreditCaseForm } from "../hooks/useCreditCaseForm";
 import type { HomeCreditContract } from "../types";
-import type { CreditCase, CreditInputs, CasePrediction } from "../creditTypes";
+import type { CreditCase, CasePrediction } from "../creditTypes";
 import { creditHints, creditLabel } from "../utils/creditLabels";
-
-export function CreditCaseForm({ record, onSaved, onPredicted }: {
-  record?: CreditCase; onSaved: (record: CreditCase) => void; onPredicted?: (result: CasePrediction) => void;
+export function CreditCaseForm({
+  record,
+  onSaved,
+  onPredicted,
+}: {
+  record?: CreditCase;
+  onSaved: (record: CreditCase) => void;
+  onPredicted?: (result: CasePrediction) => void;
 }) {
-  const [contract, setContract] = useState<HomeCreditContract | null>(null);
-  const [error, setError] = useState("");
-  const [values, setValues] = useState<Record<string, string>>({});
-  const [unknown, setUnknown] = useState<Record<string, boolean>>({});
-  const [confirmed, setConfirmed] = useState(false);
-  const [name, setName] = useState("");
-  const [busy, setBusy] = useState(false);
-  const toast = useToast();
+  const state = useCreditCaseForm({ record, onSaved, onPredicted });
+  const {
+    contract,
+    loading,
+    schemaError,
+    load,
+    error,
+    fieldErrors,
+    values,
+    unknown,
+    confirmed,
+    name,
+    busy,
+    form,
+    errorSummary,
+    invalid,
+    submit,
+    setName,
+    setValues,
+    setUnknown,
+    setConfirmed,
+    clearField,
+  } = state;
+  if (loading) return <Loading label="Đang tải định nghĩa đầu vào…" />;
+  if (schemaError || !contract)
+    return (
+      <ErrorState
+        message={schemaError || "Không tải được định nghĩa đầu vào"}
+        retry={load}
+      />
+    );
+  return (
+    <form
+      ref={form}
+      className="card space-y-6"
+      aria-busy={busy}
+      onInvalid={invalid}
+      onSubmit={(event) => {
+        void submit(event, true);
+      }}
+    >
+      <div>
+        <h2>
+          {record
+            ? "Chỉnh sửa thông tin và dự đoán"
+            : "Tạo hồ sơ khách hàng và dự đoán"}
+        </h2>
+        <p className="mt-2 field-hint">
+          Nhập thông tin thực tế theo định nghĩa Home Credit. Với trường cho
+          phép thiếu dữ liệu, có thể chọn “Không rõ”.
+        </p>
+      </div>
+      <fieldset disabled={busy} className="min-w-0 space-y-6">
+        <legend className="sr-only">Thông tin đầu vào hồ sơ</legend>
+        {!record && (
+          <FormField
+            label="Tên hoặc mã khách hàng"
+            htmlFor="case-name"
+            error={fieldErrors["case-name"]}
+          >
+            <input
+              id="case-name"
+              className="input"
+              required
+              maxLength={255}
+              aria-invalid={!!fieldErrors["case-name"]}
+              aria-describedby={
+                fieldErrors["case-name"] ? "case-name-error" : undefined
+              }
+              value={name}
+              onChange={(event) => {
+                setName(event.target.value);
+                clearField("case-name");
+              }}
+            />
+          </FormField>
+        )}
+        <CreditFields contract={contract} state={state} />
+        <div className="info-note">
+          <label className="flex items-start gap-3">
+            <input
+              id="amount-confirmation"
+              className="mt-1"
+              type="checkbox"
+              required
+              checked={confirmed}
+              onChange={(event) => {
+                setConfirmed(event.target.checked);
+                clearField("amount-confirmation");
+              }}
+            />
+            <span>
+              Tôi xác nhận số tiền dùng đơn vị của hồ sơ Home Credit gốc, không
+              mặc định là đồng Việt Nam.
+            </span>
+          </label>
+        </div>
+      </fieldset>
+      {error && (
+        <div ref={errorSummary} tabIndex={-1}>
+          <ErrorState message={error} />
+        </div>
+      )}
+      <div className="actions border-t border-line pt-5">
+        <button className="btn-primary" disabled={busy || !confirmed}>
+          {busy ? "Đang xử lý…" : "Dự đoán và lưu kết quả"}
+        </button>
+        {record && (
+          <button
+            type="button"
+            className="btn-secondary"
+            disabled={busy || !confirmed}
+            onClick={(event) => {
+              if (form.current?.reportValidity()) void submit(event, false);
+            }}
+          >
+            Chỉ lưu thông tin
+          </button>
+        )}
+      </div>
+      <p className="field-hint">
+        Thông tin và kết quả của mỗi lần dự đoán được lưu trong lịch sử hồ sơ.
+      </p>
+    </form>
+  );
+}
 
-  useEffect(() => {
-    api.get<HomeCreditContract>("/api/home-credit/input-schema").then(res => setContract(res.data)).catch(err => setError(errorMessage(err)));
-  }, []);
-  useEffect(() => {
-    const entries = Object.entries(record?.inputs_json || {}).filter(([key]) => key !== "amount_unit");
-    setValues(Object.fromEntries(entries.map(([key, value]) => [key, value == null ? "" : String(value)])));
-    setUnknown(Object.fromEntries(entries.map(([key, value]) => [key, value == null])));
-    setConfirmed(record?.inputs_json.amount_unit === "HOME_CREDIT_SOURCE");
-  }, [record?.inputs_json, record?.input_revision]);
-
-  async function submit(event: FormEvent, score: boolean) {
-    event.preventDefault();
-    if (!contract || !confirmed || busy) return;
-    const inputs: CreditInputs = { amount_unit: contract.amount_unit };
-    for (const [key, spec] of Object.entries(contract.features)) {
-      if (unknown[key] && spec.nullable) inputs[key] = null;
-      else {
-        if (!values[key]?.trim()) { setError(`Cần bổ sung ${creditLabel(key, spec.label)}`); return; }
-        inputs[key] = spec.kind === "string" ? values[key] : Number(values[key]);
-      }
-    }
-    setBusy(true); setError("");
-    try {
-      const saved = record
-        ? (await api.put<CreditCase>(`/api/credit-cases/${record.id}/inputs`, { inputs, expected_revision: record.input_revision })).data
-        : (await api.post<CreditCase>("/api/credit-cases", { inputs, display_name: name })).data;
-      onSaved(saved);
-      if (score) {
-        const result = (await api.post<CasePrediction>(`/api/credit-cases/${saved.id}/score`, { expected_revision: saved.input_revision })).data;
-        onPredicted?.(result);
-        toast.success("Đã lưu dự đoán vào lịch sử của hồ sơ này");
-      } else toast.success("Đã lưu đầu vào của hồ sơ");
-    } catch (err) { setError(errorMessage(err)); }
-    finally { setBusy(false); }
-  }
-
-  if (!contract) return <p role={error ? "alert" : undefined}>{error || "Đang tải định nghĩa đầu vào…"}</p>;
-  return <form className="card space-y-4" onSubmit={event => submit(event, true)}>
-    <h3 className="font-semibold">{record ? "Chỉnh sửa thông tin và dự đoán" : "Tạo hồ sơ khách hàng và dự đoán"}</h3>
-    {!record && <label className="block">Tên hoặc mã khách hàng<input className="input mt-1" required maxLength={255} value={name} onChange={event => setName(event.target.value)} /></label>}
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-      {Object.entries(contract.features).map(([key, spec]) => <div key={key}>
-        <label className="block font-medium" htmlFor={key}>{creditLabel(key, spec.label)}</label>
-        {creditHints[key] && <p className="text-xs text-slate-500">{creditHints[key]}</p>}
-        {spec.choices ? <select className="input w-full mt-1" id={key} required={!unknown[key]} disabled={busy || !!unknown[key]} value={values[key] || ""} onChange={event => setValues({ ...values, [key]: event.target.value })}>
-          <option value="">Chọn thông tin thực tế</option>
-          {values[key] && !spec.choices.includes(values[key]) && <option value={values[key]}>{values[key]} (giá trị nguồn)</option>}
-          {spec.choices.map(value => <option key={value}>{value}</option>)}
-        </select> : <input className="input mt-1" id={key} type={spec.kind === "string" ? "text" : "number"} step={spec.kind === "integer" ? "1" : "any"} required={!unknown[key]} disabled={busy || !!unknown[key]} value={values[key] || ""} onChange={event => setValues({ ...values, [key]: event.target.value })} />}
-        {spec.nullable && <label className="block text-sm mt-1"><input type="checkbox" disabled={busy} checked={!!unknown[key]} onChange={event => setUnknown({ ...unknown, [key]: event.target.checked })} /> Không rõ</label>}
-      </div>)}
+function CreditFields({
+  contract,
+  state,
+}: {
+  contract: HomeCreditContract;
+  state: ReturnType<typeof useCreditCaseForm>;
+}) {
+  const {
+    values,
+    unknown,
+    busy,
+    setValues,
+    setUnknown,
+    clearField,
+    fieldErrors,
+  } = state;
+  return (
+    <div className="grid min-w-0 grid-cols-1 gap-x-6 gap-y-5 md:grid-cols-2">
+      {Object.entries(contract.features).map(([key, spec]) => {
+        const hint = [creditHints[key], spec.unit && `Đơn vị: ${spec.unit}`]
+          .filter(Boolean)
+          .join(" · ");
+        const describedBy =
+          [hint && key + "-hint", fieldErrors[key] && key + "-error"]
+            .filter(Boolean)
+            .join(" ") || undefined;
+        const common = {
+          id: key,
+          className: "input",
+          required: !unknown[key],
+          disabled: busy || !!unknown[key],
+          value: values[key] || "",
+          "aria-invalid": !!fieldErrors[key],
+          "aria-describedby": describedBy,
+          onChange: (
+            event: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
+          ) => {
+            setValues((previous) => ({
+              ...previous,
+              [key]: event.target.value,
+            }));
+            clearField(key);
+          },
+        };
+        return (
+          <FormField
+            key={key}
+            label={creditLabel(key, spec.label)}
+            htmlFor={key}
+            hint={hint}
+            error={fieldErrors[key]}
+          >
+            {spec.choices ? (
+              <select {...common}>
+                <option value="">Chọn thông tin thực tế</option>
+                {values[key] && !spec.choices.includes(values[key]) && (
+                  <option value={values[key]}>
+                    {values[key]} (giá trị nguồn)
+                  </option>
+                )}
+                {spec.choices.map((value) => (
+                  <option key={value}>{value}</option>
+                ))}
+              </select>
+            ) : (
+              <input
+                {...common}
+                type={spec.kind === "string" ? "text" : "number"}
+                step={spec.kind === "integer" ? "1" : "any"}
+              />
+            )}
+            {spec.nullable && (
+              <label className="flex min-h-11 items-center gap-2 text-sm text-muted">
+                <input
+                  type="checkbox"
+                  checked={!!unknown[key]}
+                  onChange={(event) => {
+                    setUnknown((previous) => ({
+                      ...previous,
+                      [key]: event.target.checked,
+                    }));
+                    clearField(key);
+                  }}
+                />
+                Không rõ
+                <span className="sr-only">
+                  : {creditLabel(key, spec.label)}
+                </span>
+              </label>
+            )}
+          </FormField>
+        );
+      })}
     </div>
-    <label className="block text-sm"><input type="checkbox" required disabled={busy} checked={confirmed} onChange={event => setConfirmed(event.target.checked)} /> Tôi xác nhận số tiền dùng đơn vị của hồ sơ Home Credit gốc, không mặc định là đồng Việt Nam.</label>
-    {error && <p role="alert" className="text-red-700">{error}</p>}
-    <div className="flex gap-3">
-      <button className="btn-primary" disabled={busy || !confirmed}>{busy ? "Đang xử lý…" : "Dự đoán và lưu kết quả"}</button>
-      {record && <button type="button" className="btn-ghost" disabled={busy || !confirmed} onClick={event => { if (event.currentTarget.form?.reportValidity()) submit(event, false); }}>Chỉ lưu thông tin</button>}
-    </div>
-    <p className="text-xs text-slate-500">Thông tin và kết quả của mỗi lần dự đoán được lưu trong lịch sử hồ sơ.</p>
-  </form>;
+  );
 }

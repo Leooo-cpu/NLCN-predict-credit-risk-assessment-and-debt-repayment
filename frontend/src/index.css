@@ -2,38 +2,189 @@
 @tailwind components;
 @tailwind utilities;
 
-body {
-  font-family: "Segoe UI", system-ui, sans-serif;
+@layer base {
+  :root {
+    color-scheme: light;
+    --surface: 255 255 255;
+    --canvas: 248 250 252;
+    --ink: 15 23 42;
+    --muted: 71 85 105;
+    --line: 226 232 240;
+  }
+  body {
+    @apply bg-canvas text-ink antialiased;
+    font-family: "Segoe UI", system-ui, sans-serif;
+  }
+  h1 {
+    @apply text-2xl font-semibold tracking-tight text-ink sm:text-3xl;
+  }
+  h2 {
+    @apply text-lg font-semibold text-ink;
+  }
+  h3 {
+    @apply font-semibold text-ink;
+  }
+  :focus-visible {
+    @apply outline outline-2 outline-offset-4 outline-brand-500;
+  }
+  button,
+  input,
+  select,
+  textarea {
+    @apply max-w-full;
+  }
+  input[type="checkbox"] {
+    @apply h-4 w-4 shrink-0 accent-brand-600;
+  }
+  button:disabled {
+    @apply cursor-not-allowed;
+  }
+  p,
+  dd,
+  h1 {
+    overflow-wrap: anywhere;
+  }
+  ::selection {
+    @apply bg-brand-100 text-brand-900;
+  }
 }
-
-.card {
-  @apply bg-white rounded-xl shadow-sm border border-slate-200 p-5;
+@layer components {
+  .card {
+    @apply min-w-0 rounded-xl border border-line bg-surface p-4 shadow-sm sm:p-6;
+  }
+  .btn {
+    @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-lg px-4 py-2 text-center text-sm font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50;
+  }
+  .btn-primary {
+    @apply btn bg-brand-600 text-white hover:bg-brand-700;
+  }
+  .btn-secondary {
+    @apply btn border border-slate-300 bg-white text-slate-800 hover:bg-slate-50;
+  }
+  .btn-ghost {
+    @apply btn bg-slate-100 text-slate-800 hover:bg-slate-200;
+  }
+  .btn-danger {
+    @apply btn border border-rose-200 bg-rose-50 text-rose-800 hover:bg-rose-100;
+  }
+  .input {
+    @apply block min-h-11 w-full min-w-0 rounded-lg border border-slate-300 bg-white px-3 py-2 text-base text-ink placeholder:text-slate-500 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500 disabled:bg-slate-100 disabled:text-slate-600 sm:text-sm;
+  }
+  .input[aria-invalid="true"] {
+    @apply border-rose-600;
+  }
+  .field-label {
+    @apply text-sm font-semibold text-slate-800;
+  }
+  .field-hint {
+    @apply text-sm leading-relaxed text-muted;
+  }
+  .field-error {
+    @apply text-sm text-rose-800;
+  }
+  .page-header {
+    @apply flex min-w-0 flex-wrap items-start justify-between gap-4 border-b border-line pb-6;
+  }
+  .page-description {
+    @apply mt-3 max-w-3xl text-sm leading-relaxed text-muted;
+  }
+  .eyebrow {
+    @apply mb-2 text-xs font-semibold tracking-widest text-brand-600;
+  }
+  .actions {
+    @apply flex min-w-0 flex-wrap items-center gap-3;
+  }
+  .toolbar {
+    @apply flex min-w-0 flex-wrap items-end gap-3;
+  }
+  .table-scroll {
+    @apply w-full min-w-0 overflow-x-auto rounded-lg;
+  }
+  .table {
+    @apply w-full text-sm;
+  }
+  .table th {
+    @apply whitespace-nowrap border-b border-line bg-slate-50 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted;
+  }
+  .table td {
+    @apply border-b border-slate-100 px-4 py-4 align-top;
+  }
+  .table tbody tr:hover {
+    @apply bg-slate-50;
+  }
+  .table caption {
+    @apply sr-only;
+  }
+  .pager {
+    @apply mt-5 flex flex-col gap-3 border-t border-line pt-4 text-sm text-muted sm:flex-row sm:items-center sm:justify-between;
+  }
+  .text-link {
+    @apply inline-block rounded py-1 font-medium text-brand-600 underline underline-offset-4 hover:text-brand-700;
+  }
+  .empty-state {
+    @apply px-4 py-10 text-center;
+  }
+  .empty-mark {
+    @apply mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-slate-600;
+  }
+  .error-state {
+    @apply rounded-lg border border-rose-200 bg-rose-50 p-4 text-rose-900;
+  }
+  .loading-state {
+    @apply rounded-xl border border-line bg-surface p-6;
+  }
+  .skeleton {
+    @apply animate-pulse rounded bg-slate-200;
+  }
+  .badge {
+    @apply inline-flex rounded-md border border-line bg-slate-50 px-2 py-1 text-xs font-semibold text-slate-700;
+  }
+  .info-note {
+    @apply rounded-lg border border-brand-100 bg-brand-50 p-4 text-sm leading-relaxed text-brand-900;
+  }
+  .toast-stack {
+    @apply pointer-events-none fixed inset-x-3 top-3 z-50 space-y-3 sm:left-auto sm:right-6 sm:top-6 sm:w-96;
+  }
+  .toast {
+    @apply pointer-events-auto flex max-h-64 items-start justify-between gap-3 overflow-y-auto rounded-xl border p-4 text-sm shadow-lg;
+  }
+  .toast-success {
+    @apply border-emerald-200 bg-emerald-50 text-emerald-900;
+  }
+  .toast-error {
+    @apply border-rose-200 bg-rose-50 text-rose-900;
+  }
+  .toast-close {
+    @apply flex h-8 w-8 shrink-0 items-center justify-center rounded text-xl;
+  }
+  .skip-link {
+    @apply sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded focus:bg-white focus:p-3 focus:text-brand-700;
+  }
+  .nav-link {
+    @apply flex min-h-11 items-center gap-3 rounded-lg px-3 py-3 text-sm font-medium text-slate-300 hover:bg-slate-800 hover:text-white;
+  }
+  .nav-active {
+    @apply bg-brand-600 text-white hover:bg-brand-700;
+  }
+  .detail-grid {
+    @apply grid grid-cols-1 gap-x-8 gap-y-5 sm:grid-cols-2;
+  }
+  .detail-grid dt {
+    @apply mb-1 text-sm text-muted;
+  }
+  .detail-grid dd {
+    @apply font-medium;
+  }
 }
-
-.btn {
-  @apply inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-medium transition;
+dialog::backdrop {
+  background: rgb(15 23 42 / 0.6);
 }
-
-.btn-primary {
-  @apply btn bg-brand-600 text-white hover:bg-brand-700 disabled:opacity-50;
-}
-
-.btn-ghost {
-  @apply btn bg-slate-100 text-slate-800 hover:bg-slate-200;
-}
-
-.input {
-  @apply w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500;
-}
-
-.table {
-  @apply w-full text-sm;
-}
-
-.table th {
-  @apply text-left text-slate-500 font-medium py-2 px-3 border-b;
-}
-
-.table td {
-  @apply py-2 px-3 border-b border-slate-100;
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
