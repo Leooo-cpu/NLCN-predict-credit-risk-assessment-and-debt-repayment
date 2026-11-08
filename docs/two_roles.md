@@ -7,6 +7,9 @@
 Trang đăng nhập chỉ có hai tài khoản demo `admin@credit-risk.com` và `officer@credit-risk.com`.
 Tự đăng ký chỉ cho phép OFFICER. API quản lý người dùng chỉ chấp nhận ADMIN/OFFICER;
 API từ chối VIEWER, RISK_VIEWER và tên cũ CREDIT_OFFICER khi tạo/đổi vai trò.
+Biểu mẫu/API tạo người dùng chỉ tạo OFFICER, không tạo thêm ADMIN hoặc nâng tài khoản
+khác thành ADMIN. Admin hiện có không thể bị khóa hoặc hạ vai trò; vẫn sửa được
+thông tin cá nhân/mật khẩu theo luồng quản lý hiện tại. Khóa/mở nhân viên không thay đổi.
 
 ## Database đang có dữ liệu
 

@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
 from app.core.exceptions import AppError, NotFoundError
-from app.core.roles import ADMIN, ALL_ROLES
+from app.core.roles import ADMIN, ALL_ROLES, OFFICER
 from app.core.security import hash_password
 from app.database import get_db
 from app.dependencies import require_roles
@@ -37,8 +37,8 @@ def create_user(
     db: Session = Depends(get_db),
     current: User = Depends(require_roles(ADMIN)),
 ):
-    if payload.role not in ALL_ROLES:
-        raise AppError("Vai trò không hợp lệ", 400)
+    if payload.role != OFFICER:
+        raise AppError("Chỉ được tạo tài khoản nhân viên OFFICER, không được tạo thêm Admin", 400)
     if db.query(User).filter(User.email == payload.email.lower()).first():
         raise AppError("Email đã tồn tại", 400)
     user = User(
@@ -66,6 +66,13 @@ def update_user(
     if user is None:
         raise NotFoundError("Không tìm thấy người dùng")
     data = payload.model_dump(exclude_unset=True)
+    if user.role == ADMIN:
+        if "is_active" in data and data["is_active"] is not True:
+            raise AppError("Không được khóa tài khoản Admin", 400)
+        if "role" in data and data["role"] != ADMIN:
+            raise AppError("Không được thay đổi vai trò của tài khoản Admin", 400)
+    elif data.get("role") == ADMIN:
+        raise AppError("Không được chuyển tài khoản khác thành Admin", 400)
     if "role" in data and data["role"] not in ALL_ROLES:
         raise AppError("Chỉ hỗ trợ vai trò ADMIN hoặc OFFICER", 400)
     if user.role not in ALL_ROLES:

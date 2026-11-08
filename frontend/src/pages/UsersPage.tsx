@@ -3,7 +3,7 @@ import { api, errorMessage } from "../api/client";
 import { Loading } from "../components/Loading";
 import { Pager } from "../components/Pager";
 import { useToast } from "../components/Toast";
-import type { Paginated, Role, User } from "../types";
+import type { Paginated, User } from "../types";
 
 export function UsersPage() {
   const [items, setItems] = useState<User[]>([]);
@@ -11,7 +11,7 @@ export function UsersPage() {
   const [page, setPage] = useState(1);
   const [q, setQ] = useState("");
   const [loading, setLoading] = useState(true);
-  const [form, setForm] = useState({ email: "", full_name: "", password: "", role: "OFFICER" as Role });
+  const [form, setForm] = useState({ email: "", full_name: "", password: "" });
   const toast = useToast();
 
   async function load(p = page) {
@@ -36,9 +36,9 @@ export function UsersPage() {
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
     try {
-      await api.post("/api/users", form);
+      await api.post("/api/users", { ...form, role: "OFFICER" });
       toast.success("Đã tạo người dùng");
-      setForm({ email: "", full_name: "", password: "", role: "OFFICER" });
+      setForm({ email: "", full_name: "", password: "" });
       load(1);
     } catch (err) {
       toast.error(errorMessage(err));
@@ -46,6 +46,7 @@ export function UsersPage() {
   }
 
   async function toggle(user: User) {
+    if (user.role !== "OFFICER") return;
     try {
       await api.put(`/api/users/${user.id}`, { is_active: !user.is_active });
       load(page);
@@ -74,7 +75,7 @@ export function UsersPage() {
                     <td>{u.email}</td>
                     <td>{u.role}</td>
                     <td>{u.is_active ? "Hoạt động" : "Khóa"}</td>
-                    <td>{u.role === "ADMIN" || u.role === "OFFICER" ? <button className="text-brand-600" onClick={() => toggle(u)}>{u.is_active ? "Khóa" : "Mở"}</button> : <span className="text-slate-500">Vai trò đã ngừng sử dụng</span>}</td>
+                    <td>{u.role === "ADMIN" ? <span className="text-slate-500">Admin được bảo vệ</span> : u.role === "OFFICER" ? <button className="text-brand-600" onClick={() => toggle(u)}>{u.is_active ? "Khóa" : "Mở"}</button> : <span className="text-slate-500">Vai trò đã ngừng sử dụng</span>}</td>
                   </tr>
                 ))}
               </tbody>
@@ -84,14 +85,11 @@ export function UsersPage() {
         )}
       </div>
       <form className="card space-y-3" onSubmit={onSubmit}>
-        <h3 className="font-medium">Tạo người dùng</h3>
+        <h3 className="font-medium">Tạo tài khoản nhân viên</h3>
+        <p className="text-sm text-slate-500">Tài khoản mới có vai trò OFFICER. Không thể tạo thêm Admin.</p>
         <input className="input" placeholder="Họ tên" value={form.full_name} onChange={(e) => setForm({ ...form, full_name: e.target.value })} required />
         <input className="input" type="email" placeholder="Email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} required />
         <input className="input" type="password" placeholder="Mật khẩu" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} required />
-        <select className="input" value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value as Role })}>
-          <option value="ADMIN">ADMIN</option>
-          <option value="OFFICER">OFFICER</option>
-        </select>
         <button className="btn-primary w-full">Tạo</button>
       </form>
     </div>
