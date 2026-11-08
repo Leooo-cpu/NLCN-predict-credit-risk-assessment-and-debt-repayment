@@ -5,6 +5,12 @@ import { errorMessage } from "../api/client";
 import { useToast } from "../components/Toast";
 import type { Role } from "../types";
 
+const demoAccounts = [
+  { label: "Admin", email: "admin@credit-risk.com", password: "Admin@123456" },
+  { label: "Officer", email: "officer@credit-risk.com", password: "Officer@123456" },
+  { label: "Viewer", email: "viewer@credit-risk.com", password: "Viewer@123456" },
+];
+
 export function LoginPage() {
   const { login, register } = useAuth();
   const toast = useToast();
@@ -23,7 +29,7 @@ export function LoginPage() {
     setLoading(true);
     try {
       if (mode === "login") {
-        await login(email, password);
+        await login(email.trim().toLowerCase(), password);
         toast.success("Đăng nhập thành công");
         navigate("/");
       } else {
@@ -54,8 +60,8 @@ export function LoginPage() {
             </select>
           </>
         )}
-        <input className="input" type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} required />
-        <input className="input" type="password" placeholder="Mật khẩu" value={password} onChange={(e) => setPassword(e.target.value)} required />
+        <input className="input" aria-label="Email" autoComplete="username" type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+        <input className="input" aria-label="Mật khẩu" autoComplete={mode === "login" ? "current-password" : "new-password"} type="password" placeholder="Mật khẩu" value={password} onChange={(e) => setPassword(e.target.value)} required />
         {error && <p className="text-sm text-rose-600">{error}</p>}
         <button className="btn-primary w-full" disabled={loading}>
           {loading ? "Đang xử lý..." : mode === "login" ? "Đăng nhập" : "Đăng ký"}
@@ -63,9 +69,12 @@ export function LoginPage() {
         <button type="button" className="text-sm text-brand-600" onClick={() => setMode(mode === "login" ? "register" : "login")}>
           {mode === "login" ? "Chưa có tài khoản? Đăng ký" : "Đã có tài khoản? Đăng nhập"}
         </button>
-        <p className="text-xs text-slate-500">
-          Cán bộ: officer@credit-risk.com / Officer@123456 · Người xem: viewer@credit-risk.com / Viewer@123456
-        </p>
+        {mode === "login" && <div className="space-y-2 border-t pt-3">
+          <p className="text-sm text-slate-500">Điền nhanh tài khoản demo, sau đó bấm Đăng nhập:</p>
+          {demoAccounts.map(account => <button key={account.email} type="button" className="btn-ghost w-full text-left" disabled={loading} onClick={() => {
+            setEmail(account.email); setPassword(account.password); setError("");
+          }}>{account.label}: {account.email}</button>)}
+        </div>}
       </form>
     </div>
   );

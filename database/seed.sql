@@ -1,3 +1,6 @@
 -- User accounts are created by backend with bcrypt.
+-- Demo emails: admin@credit-risk.com (ADMIN), officer@credit-risk.com
+-- (CREDIT_OFFICER), viewer@credit-risk.com (RISK_VIEWER).
+-- Backend seed preserves existing IDs/password hashes when renaming legacy demo emails.
 -- Do not seed synthetic customers, predictions or a fake ACTIVE model.
 -- Import application_train.csv with app.import_home_credit after services start.

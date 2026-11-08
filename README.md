@@ -63,6 +63,10 @@ không gửi vào mô hình. Dữ liệu đã ở volume Docker; không cần im
 
 ## 4. Tài khoản demo
 
+Trang đăng nhập có nút điền nhanh cho cả ba tài khoản `.com` dưới đây. Nút chỉ điền thông tin; bấm **Đăng nhập** để xác thực. Nếu mật khẩu đã được đổi, nhập mật khẩu hiện tại.
+
+Backend tạo tài khoản khi chưa có. Với tài khoản demo cũ dùng đuôi `.local`, bước seed chỉ đổi email sang `.com`, giữ ID, vai trò và mật khẩu đã băm. Nếu cả hai địa chỉ cùng tồn tại, dùng `.com` và giữ nguyên cả hai; nếu tài khoản được chọn sai vai trò, seed báo xung đột để kiểm tra. Không cần xóa database hay Docker volume. `ADMIN_EMAIL` vẫn hỗ trợ địa chỉ quản trị tùy chỉnh; cấu hình mặc định dùng `admin@credit-risk.com`.
+
 | Vai trò | Email | Mật khẩu | Quyền hạn |
 |---|---|---|---|
 | **ADMIN** | `admin@credit-risk.com` | `Admin@123456` | Quản trị người dùng, mô hình, toàn bộ dữ liệu |
