@@ -1,3 +1,6 @@
+from app.home_credit_features import FEATURE_SPEC
+
+# Legacy labels stay available for historical explanations only.
 FEATURE_LABELS = {
     "age": "Tuổi khách hàng",
     "monthly_income": "Thu nhập hàng tháng",
@@ -14,6 +17,8 @@ FEATURE_LABELS = {
     "credit_history": "Lịch sử tín dụng",
     "purpose": "Mục đích vay",
 }
+
+FEATURE_LABELS.update({name: spec["label"] for name, spec in FEATURE_SPEC.items()})
 
 CREDIT_HISTORY_VI = {"GOOD": "tốt", "FAIR": "trung bình", "POOR": "kém"}
 PURPOSE_VI = {
@@ -34,6 +39,8 @@ def human_feature_name(name: str) -> str:
 
 def impact_description(feature: str, value, shap_value: float) -> str:
     direction = "làm tăng rủi ro vỡ nợ" if shap_value > 0 else "làm giảm rủi ro vỡ nợ"
+    if any(feature.startswith(name) or name in feature for name in FEATURE_SPEC):
+        direction = "làm tăng rủi ro gặp khó khăn thanh toán" if shap_value > 0 else "làm giảm rủi ro gặp khó khăn thanh toán"
     label = human_feature_name(feature)
     pretty_value = value
     if "credit_history" in feature:

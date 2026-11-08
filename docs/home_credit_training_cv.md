@@ -1,5 +1,8 @@
 # Prompt 2: so sánh mô hình bằng CV trên Training
 
+> Đây là ghi nhận lịch sử Prompt 2. Prompt 3 đã chốt AP → ROC-AUC → thứ tự ứng viên,
+> chạy đánh giá thật và tích hợp phục vụ; xem [bản phát hành Home Credit](home_credit_release.md).
+
 ## Luồng được cài đặt
 
 Trong [train.py](../ml-service/training/train.py):

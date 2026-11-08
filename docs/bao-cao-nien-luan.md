@@ -22,7 +22,7 @@ Trong hoạt động tín dụng bán lẻ và tài chính tiêu dùng, đánh g
 
 ### 1.3. Phạm vi và nguyên tắc đạo đức dữ liệu
 - **Hệ thống niên luận:** Hệ thống đóng vai trò hỗ trợ phân tích, **không** thay thế quyền phê duyệt hoặc từ chối khoản vay thật của tổ chức tín dụng.
-- **Dữ liệu:** Toàn bộ dữ liệu demo là **dữ liệu mô phỏng (synthetic data)**, không chứa dữ liệu cá nhân thật hoặc kết nối hệ thống ngân hàng thật.
+- **Dữ liệu:** Mô hình mới dùng bảng có nhãn Home Credit Default Risk. Hồ sơ và kết quả demo cũ vẫn giữ nguồn mô phỏng. Luồng Home Credit riêng không tự chuyển hồ sơ mô phỏng thành dữ liệu thật.
 
 ---
 
@@ -89,17 +89,16 @@ Hệ thống được thiết kế theo kiến trúc hướng dịch vụ với 
 ## 4. QUY TRÌNH XÂY DỰNG MÔ HÌNH MÁY HỌC & GIẢI THÍCH
 
 ### 4.1. Tiền xử lý & Kỹ thuật tạo đặc trưng (Feature Engineering)
-- **Biến mục tiêu ($y$):**
-  - $1$: Khách hàng có nguy cơ vỡ nợ / không trả nợ tốt.
-  - $0$: Khách hàng có khả năng hoàn trả nợ tốt.
-- **Đặc trưng phái sinh:**
-  - **DTI (Debt-to-Income):** Tỷ lệ tổng dư nợ hiện tại trên thu nhập hàng tháng.
-  - **Loan-to-Income:** Tỷ lệ số tiền vay đề nghị trên thu nhập hàng tháng.
-  - **Debt Burden:** Tổng gánh nặng nợ sau khi cộng thêm khoản vay mới trên thu nhập.
+- **Biến mục tiêu:** TARGET=1 là khó khăn thanh toán theo Home Credit (trễ hơn X ngày
+  trên ít nhất một trong Y kỳ đầu; X/Y không được công bố); TARGET=0 là các trường hợp còn lại.
+- **Đầu vào:** AMT_CREDIT, AMT_ANNUITY, DAYS_BIRTH, DAYS_EMPLOYED, NAME_CONTRACT_TYPE,
+  OCCUPATION_TYPE. Không đưa TARGET hoặc SK_ID_CURR vào mô hình. Không dùng các tỷ lệ
+  demo hoặc chuyển AMT_INCOME_TOTAL thành thu nhập tháng khi chưa rõ kỳ thu nhập.
 - **Tiền xử lý:**
-  - Imputer: Điền giá trị khuyết thiếu bằng Median (biến số) và Most Frequent (biến phân loại).
+  - Imputer: Median cho số; mã __MISSING__ cho phân loại. DAYS_EMPLOYED=365243 được coi là thiếu.
   - Scaler: Chuẩn hóa biến số bằng `StandardScaler`.
-  - Encoder: Mã hóa One-Hot Encoding cho các biến hạng mục (`occupation`, `credit_history`, `purpose`).
+  - Encoder: One-hot NAME_CONTRACT_TYPE và OCCUPATION_TYPE. Mỗi lượt CV fit Pipeline mới,
+    chỉ học trung vị, chuẩn hóa và danh mục trên các fold fit.
 
 ### 4.2. Huấn luyện và lựa chọn mô hình
 - Dữ liệu được chia theo tỷ lệ 80/20 với phương pháp **Stratified Train/Test Split** nhằm bảo toàn phân phối nhãn.
@@ -108,19 +107,25 @@ Hệ thống được thiết kế theo kiến trúc hướng dịch vụ với 
   1. **Logistic Regression:** Mô hình tuyến tính baseline.
   2. **Random Forest Classifier:** Mô hình tập hợp cây quyết định phân tán.
   3. **XGBoost Classifier:** Thuật toán tăng cường độ dốc (Gradient Boosting) tối ưu.
-- **Tiêu chuẩn lựa chọn mô hình:**
-  $$\text{Selection Score} = 0.45 \times \text{ROC-AUC} + 0.35 \times \text{PR-AUC} + 0.20 \times \text{F1-score}$$
-  *Quyết định: Không lựa chọn mô hình chỉ theo Accuracy do phân phối mất cân bằng nhãn trong bài toán tín dụng.*
+- **Tiêu chuẩn lựa chọn:** AP trung bình 5-fold trên 80% Training cao nhất. Hòa thì
+  ROC-AUC trung bình, vẫn hòa thì theo Logistic Regression → Random Forest → XGBoost.
+  AP được tính bằng average_precision_score từ xác suất lớp 1. Không dùng công thức
+  điểm tổng hợp. Test 20% chỉ đánh giá một lần sau khi chọn và refit, ở ngưỡng cố định 0,5.
+- Kết quả thật, CV mean/std và Test độc lập: [Home Credit release](home_credit_release.md).
 
 ### 4.3. Công thức tính điểm tín dụng mô phỏng
 $$\text{CreditScore} = \text{round}\left(\max\left(300, \min\left(850, 850 - 550 \times \text{default\_probability}\right)\right)\right)$$
 
 - **Ngưỡng phân nhóm rủi ro:**
+  Các ngưỡng bên dưới chỉ thuộc dữ liệu mô phỏng cũ; không áp dụng cho Home Credit.
+  Mô hình mới trả NOT_VALIDATED sau kiểm tra OOF trên Training; xác suất chưa hiệu chỉnh.
   - $\text{default\_probability} < 0.20$: **LOW_RISK** (Rủi ro thấp, đề xuất duyệt).
   - $0.20 \le \text{default\_probability} < 0.45$: **MEDIUM_RISK** (Rủi ro trung bình, cần thẩm định bổ sung).
   - $\text{default\_probability} \ge 0.45$: **HIGH_RISK** (Rủi ro cao, cảnh báo nợ xấu).
 
 ### 4.4. Giải thích bằng SHAP (Explainable AI)
+Phần dưới mô tả chức năng mô phỏng lịch sử. Home Credit hiện trả giải thích rỗng kèm
+ghi chú chưa triển khai SHAP, không dùng heuristic cũ để giả giá trị SHAP.
 - Sử dụng `shap.TreeExplainer` trích xuất giá trị SHAP đóng góp cho từng quyết định dự đoán.
 - Phân tích top 5-7 đặc trưng ảnh hưởng mạnh nhất:
   - Giá trị SHAP dương ($> 0$): **INCREASE_RISK** (Tăng nguy cơ vỡ nợ, ví dụ: có lịch sử chậm trả nợ, DTI vượt mức 4.0).
@@ -140,7 +145,8 @@ docker compose up --build
 
 Hệ thống sẽ tự động:
 1. Khởi tạo container PostgreSQL, áp dụng schema `init.sql` và seed `seed.sql`.
-2. Khởi tạo container `ml-service`, nạp pipeline và tự động huấn luyện nếu chưa có artifact.
+2. Khởi tạo container `ml-service`, nạp manifest và phiên bản Home Credit đã xác minh;
+   báo lỗi nếu thiếu artifact, không tự huấn luyện. Cần chuẩn bị artifact trong volume trước.
 3. Khởi tạo container `backend`, kiểm tra database, tự động seed tài khoản admin/cán bộ và dữ liệu mẫu.
 4. Build và phục vụ `frontend` qua Nginx tại cổng `3000`.
 

@@ -39,7 +39,7 @@ def ensure_default_users(db: Session) -> list[User]:
 
 
 def ensure_model_registry(db: Session) -> None:
-    existing = db.query(ModelRegistry).filter(ModelRegistry.status == "ACTIVE").first()
+    existing = db.query(ModelRegistry).filter(ModelRegistry.version == "1.0.0-sim").first()
     if existing:
         return
     db.add(
@@ -52,7 +52,7 @@ def ensure_model_registry(db: Session) -> None:
                 "note": "Mô hình demo trên dữ liệu mô phỏng. Metrics đầy đủ nằm ở ML Service.",
                 "dataset": "simulated",
             },
-            status="ACTIVE",
+            status="HISTORICAL",
             artifact_path="/app/artifacts/credit_pipeline.joblib",
         )
     )

@@ -43,6 +43,7 @@ Thumbs.db
 # ML artifacts (keep directory, ignore large binaries except committed demo model)
 ml-service/artifacts/*.pkl
 ml-service/artifacts/*.joblib
+ml-service/artifacts/versions/**/*.joblib
 ml-service/artifacts/plots/
 ml-service/data/raw/
 ml-service/data/processed/

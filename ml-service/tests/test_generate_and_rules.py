@@ -1,4 +1,8 @@
-from app.scoring import request_to_frame, _risk_and_score
+"""Historical synthetic fixture remains labeled; active inference uses Home Credit."""
+import pytest
+from pydantic import ValidationError
+
+from app.scoring import request_to_frame
 from app.schemas import PredictRequest
 from training.generate_data import generate_simulated_dataset
 
@@ -7,34 +11,19 @@ def test_simulated_dataset_has_target_and_note():
     frame = generate_simulated_dataset(n=200, seed=1)
     assert set(frame["default"].unique()).issubset({0, 1})
     assert (frame["dataset_note"] == "Dữ liệu mô phỏng").all()
-    assert "dti" in frame.columns
-    assert "loan_to_income" in frame.columns
-    assert "debt_burden" in frame.columns
 
 
-def test_risk_thresholds():
-    assert _risk_and_score(0.10)[0] == "LOW_RISK"
-    assert _risk_and_score(0.20)[0] == "MEDIUM_RISK"
-    assert _risk_and_score(0.45)[0] == "HIGH_RISK"
-    level, score = _risk_and_score(0.2)
-    assert level == "MEDIUM_RISK"
-    assert abs(score - (850 - 550 * 0.2)) < 0.01
+def test_old_request_is_rejected_instead_of_inventing_home_credit_values():
+    with pytest.raises(ValidationError):
+        PredictRequest(age=30, monthly_income=10000000, term_months=24)
 
 
-def test_request_to_frame_derives_features():
+def test_request_uses_exact_features_and_explicit_nullable_values():
     payload = PredictRequest(
-        age=30,
-        occupation="Ky su",
-        monthly_income=10_000_000,
-        years_employed=3,
-        requested_amount=20_000_000,
-        term_months=24,
-        purpose="TIEU_DUNG",
-        current_debt=5_000_000,
-        existing_loans=1,
-        late_payments=0,
-        credit_history="GOOD",
+        AMT_CREDIT=100000.0, AMT_ANNUITY=None, DAYS_BIRTH=-12000,
+        DAYS_EMPLOYED=365243, NAME_CONTRACT_TYPE="Cash loans", OCCUPATION_TYPE=None,
+        amount_unit="HOME_CREDIT_SOURCE",
     )
     frame = request_to_frame(payload)
-    assert frame.loc[0, "loan_to_income"] == 2.0
-    assert frame.loc[0, "dti"] == 0.5
+    assert "TARGET" not in frame and "SK_ID_CURR" not in frame
+    assert frame["AMT_ANNUITY"].isna().all()

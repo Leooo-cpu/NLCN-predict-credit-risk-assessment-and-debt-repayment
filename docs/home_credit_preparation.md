@@ -1,5 +1,8 @@
 # Chuẩn bị dữ liệu Home Credit Default Risk
 
+> Kết quả chuẩn bị dưới đây là lịch sử Prompt 1. Trạng thái phục vụ hiện tại và kết
+> quả thật ở Prompt 3: [Home Credit release](home_credit_release.md).
+
 > Tài liệu và audit này ghi nhận bước Prompt 1. Prompt 2 bổ sung CV ba mô hình trên
 > Training và chuyển mẫu thử tiền xử lý sang Training sau khi tách Test; xem
 > [quy trình CV](home_credit_training_cv.md). Báo cáo audit Prompt 1 được giữ nguyên.

@@ -13,6 +13,7 @@ import { ModelsPage } from "./pages/ModelsPage";
 import { PredictionHistoryPage } from "./pages/PredictionHistoryPage";
 import { RiskAssessmentResultPage } from "./pages/RiskAssessmentResultPage";
 import { UsersPage } from "./pages/UsersPage";
+import { HomeCreditPage } from "./pages/HomeCreditPage";
 
 function Private({ children }: { children: ReactElement }) {
   const { user, loading } = useAuth();
@@ -59,7 +60,8 @@ export default function App() {
         />
         <Route path="loans/:id" element={<LoanDetailPage />} />
         <Route path="loans/:id/result" element={<RiskAssessmentResultPage />} />
-        <Route path="risk-assessment" element={<RiskAssessmentResultPage />} />
+        <Route path="risk-assessment" element={<WriterOnly><HomeCreditPage /></WriterOnly>} />
+        <Route path="home-credit" element={<WriterOnly><HomeCreditPage /></WriterOnly>} />
         <Route path="predictions" element={<PredictionHistoryPage />} />
         <Route
           path="loans/:id/edit"

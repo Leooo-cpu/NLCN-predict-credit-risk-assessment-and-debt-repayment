@@ -25,9 +25,25 @@ TARGET_MEANING = {
 NUMERIC = ["AMT_CREDIT", "AMT_ANNUITY", "DAYS_BIRTH", "DAYS_EMPLOYED"]
 CATEGORICAL = ["NAME_CONTRACT_TYPE", "OCCUPATION_TYPE"]
 FEATURES = NUMERIC + CATEGORICAL
+FEATURE_SPEC = {
+    "AMT_CREDIT": {"kind": "number", "nullable": False, "label": "Số tiền cấp tín dụng", "unit": "HOME_CREDIT_SOURCE (không mặc định VND)"},
+    "AMT_ANNUITY": {"kind": "number", "nullable": True, "label": "Số tiền annuity theo điều kiện khoản vay", "unit": "HOME_CREDIT_SOURCE; không suy ra tần suất"},
+    "DAYS_BIRTH": {"kind": "integer", "nullable": False, "label": "Ngày sinh so với ngày nộp hồ sơ", "unit": "ngày âm"},
+    "DAYS_EMPLOYED": {"kind": "integer", "nullable": True, "label": "Ngày bắt đầu công việc so với ngày nộp", "unit": "ngày không dương; 365243 = không biết"},
+    "NAME_CONTRACT_TYPE": {"kind": "string", "nullable": False, "label": "Loại hợp đồng", "unit": "danh mục", "choices": ["Cash loans", "Revolving loans"]},
+    "OCCUPATION_TYPE": {"kind": "string", "nullable": True, "label": "Nhóm nghề theo Home Credit", "unit": "danh mục"},
+}
 # Income is deliberately held out until the income period can be documented.
 # Do not map monthly_income to AMT_INCOME_TOTAL or invent a conversion factor.
 SPECIAL_CATEGORIES = ("XNA", "XAP", "Unknown")
+
+
+def frame_from_values(values: dict) -> pd.DataFrame:
+    frame = pd.DataFrame([{name: values[name] for name in FEATURES}], columns=FEATURES)
+    for name in NUMERIC:
+        frame[name] = pd.to_numeric(frame[name], errors="raise").astype(float)
+    validate_features(frame)
+    return frame
 
 
 def validate_features(frame: pd.DataFrame) -> None:

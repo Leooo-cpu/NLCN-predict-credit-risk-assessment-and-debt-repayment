@@ -4,7 +4,7 @@ from fastapi import FastAPI, HTTPException
 
 from app.config import get_settings
 from app.schemas import PredictRequest, PredictResponse
-from app.scoring import metadata, predict
+from app.scoring import metadata, predict, input_contract, sample_request
 
 settings = get_settings()
 
@@ -23,10 +23,10 @@ async def lifespan(_app: FastAPI):
 app = FastAPI(
     title="Credit Risk ML Service",
     description=(
-        "Dịch vụ máy học dự đoán xác suất vỡ nợ trên dữ liệu mô phỏng. "
+        "Ước lượng rủi ro gặp khó khăn thanh toán theo TARGET Home Credit Default Risk. "
         "Không dùng cho phê duyệt tín dụng thật."
     ),
-    version="1.0.0",
+    version="2.0.0-home-credit",
     lifespan=lifespan,
 )
 
@@ -39,6 +39,16 @@ def health():
 @app.get("/model/info")
 def model_info():
     return metadata()
+
+
+@app.get("/model/input-schema")
+def model_input_schema():
+    return input_contract()
+
+
+@app.get("/model/sample")
+def model_sample():
+    return sample_request()
 
 
 @app.post("/predict", response_model=PredictResponse)

@@ -1,39 +1,49 @@
-from pydantic import BaseModel, Field
+from typing import Literal
+
+from pydantic import BaseModel, ConfigDict, Field, create_model, model_validator
+
+from app.home_credit_features import FEATURES, FEATURE_SPEC, frame_from_values
 
 
-class PredictRequest(BaseModel):
-    age: int = Field(ge=18, le=90)
-    occupation: str
-    monthly_income: float = Field(gt=0)
-    years_employed: float = Field(ge=0)
-    requested_amount: float = Field(gt=0)
-    term_months: int = Field(ge=3, le=360)
-    purpose: str
-    current_debt: float = Field(ge=0)
-    existing_loans: int = Field(ge=0)
-    late_payments: int = Field(ge=0)
-    credit_history: str
-    dti: float | None = None
+class _HomeCreditInput(BaseModel):
+    model_config = ConfigDict(extra="forbid", allow_inf_nan=False, strict=True)
+    amount_unit: Literal["HOME_CREDIT_SOURCE"] = Field(
+        description="Xác nhận thang tiền gốc Home Credit; không tự đổi từ VND hoặc thu nhập tháng."
+    )
+
+    @model_validator(mode="after")
+    def validate_contract(self):
+        frame_from_values(self.model_dump())
+        return self
 
 
-class ShapFactor(BaseModel):
-    feature_name: str
-    feature_value: float | str | None
-    shap_value: float
-    impact: str
-    description: str
+def _field(name):
+    spec = FEATURE_SPEC[name]
+    kind = {"number": float, "integer": int, "string": str}[spec["kind"]]
+    if spec["nullable"]:
+        kind = kind | None
+    return kind, Field(..., description=f"{spec['label']}; {spec['unit']}. Null chỉ khi không biết và trường cho phép.")
+
+
+# Every key is required. Explicit null is allowed only where the shared contract permits it.
+PredictRequest = create_model("PredictRequest", __base__=_HomeCreditInput, **{name: _field(name) for name in FEATURES})
 
 
 class PredictResponse(BaseModel):
-    default_probability: float
-    repayment_probability: float
-    risk_level: str
+    payment_difficulty_probability: float
+    other_outcome_probability: float
+    predicted_payment_difficulty: bool
+    classification_threshold: float
+    risk_level: str = "NOT_VALIDATED"
+    risk_bands_validated: bool = False
     credit_score: float
-    shap_explanation: list[ShapFactor]
+    credit_score_is_simulated: bool = True
     model_version: str
     algorithm: str
-    credit_score_is_simulated: bool = True
-    data_note: str = "Dữ liệu mô phỏng"
-    disclaimer: str = (
-        "Kết quả chỉ mang tính hỗ trợ đánh giá rủi ro, không thay thế quyết định cấp tín dụng thực tế."
-    )
+    data_source: str
+    outcome_definition: str
+    probability_calibrated: bool = False
+    imputed_features: list[str]
+    shap_explanation: list[dict] = Field(default_factory=list)
+    explanation_note: str = "Chưa triển khai SHAP cho hợp đồng Home Credit; không dùng heuristic mô phỏng."
+    disclaimer: str = "Ước lượng sự kiện TARGET=1 của Home Credit; 1-p không phải bảo đảm trả nợ đầy đủ. Điểm chỉ minh họa."

@@ -1,12 +1,12 @@
 """Home Credit: compare on Training CV, refit separately, evaluate Test separately.
 
-CLI never evaluates Test or exports serving artifacts. The official selection
-policy is pending; CV exposes selection inputs without declaring a winner.
+Training exports a versioned candidate. Activation requires separate reload/API checks.
 """
 from __future__ import annotations
 
 import argparse
 from dataclasses import dataclass
+from datetime import datetime, timezone
 import hashlib
 import json
 import os
@@ -21,16 +21,18 @@ import numpy as np
 import pandas as pd
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import average_precision_score, roc_auc_score
+from sklearn.metrics import average_precision_score, roc_auc_score, precision_score, recall_score, f1_score, confusion_matrix
 from sklearn.model_selection import StratifiedKFold, train_test_split
 from sklearn.pipeline import Pipeline
 
 from app.home_credit_features import (
-    CATEGORICAL, CONTRACT_VERSION, DATASET, FEATURES, ID_COLUMN, NUMERIC,
+    CATEGORICAL, CONTRACT_VERSION, DATASET, FEATURES, FEATURE_SPEC, ID_COLUMN, NUMERIC,
     SPECIAL_CATEGORIES, TARGET, TARGET_MEANING, build_preprocessor, validate_features,
 )
 
 MODEL_NAMES = ("LogisticRegression", "RandomForest", "XGBoost")
+CLASSIFICATION_THRESHOLD = 0.5  # Fixed before any Test evaluation; no Test tuning.
+SELECTION_POLICY = "max CV mean AP; exact tie: max CV mean ROC-AUC; exact tie: LogisticRegression, RandomForest, XGBoost"
 
 
 @dataclass(frozen=True)
@@ -149,8 +151,8 @@ def probability_metrics(y_true, probabilities) -> dict:
     }
 
 
-def compare_on_training(training: TrainingData, *, profile: str = "standard") -> dict:
-    """Stage 1: five-fold comparison. No Test input, winner or threshold selection."""
+def compare_on_training(training: TrainingData, *, profile: str = "standard", oof_predictions=None) -> dict:
+    """Stage 1: five-fold comparison and AP-only winner selection; no Test input."""
     _validate_training(training, min_per_class=5)
     splitter = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
     # Materialize ONCE: every model uses these exact same positional indices.
@@ -158,6 +160,7 @@ def compare_on_training(training: TrainingData, *, profile: str = "standard") ->
     results = {}
     for name in MODEL_NAMES:
         folds = []
+        oof = np.full(len(training.y), np.nan)
         for fold_number, (fit_pos, valid_pos) in enumerate(splits, start=1):
             x_fit, y_fit = training.x.iloc[fit_pos], training.y.iloc[fit_pos]
             x_valid, y_valid = training.x.iloc[valid_pos], training.y.iloc[valid_pos]
@@ -165,6 +168,8 @@ def compare_on_training(training: TrainingData, *, profile: str = "standard") ->
             pipe = _new_pipeline(name, y_fit, profile=profile)
             pipe.fit(x_fit, y_fit)
             probabilities = pipe.predict_proba(x_valid)[:, 1]
+            oof[valid_pos] = probabilities
+            print(f"CV {name} fold {fold_number}/5 complete", file=sys.stderr, flush=True)
             folds.append({
                 "fold": fold_number,
                 "fit_rows": len(fit_pos), "validation_rows": len(valid_pos),
@@ -182,10 +187,10 @@ def compare_on_training(training: TrainingData, *, profile: str = "standard") ->
         results[name] = {
             "folds": folds,
             "summary": summary,
-            # Inputs for the official policy in Prompt 3; never the old Test formula.
             "selection_inputs": summary.copy(),
-            "selection_score": None,
         }
+        if oof_predictions is not None:
+            oof_predictions[name] = oof
     return {
         "dataset": DATASET,
         "contract_version": CONTRACT_VERSION,
@@ -194,11 +199,24 @@ def compare_on_training(training: TrainingData, *, profile: str = "standard") ->
         "training_ids_sha256": _partition_digest(training.record_ids),
         "cv": {"n_splits": 5, "shuffle": True, "random_state": 42, "std_ddof": 0},
         "models": results,
-        "selection_policy": "pending_prompt_3",
-        "selected_model": None,
+        "selection_policy": SELECTION_POLICY,
+        "selected_model": select_model(results),
         "test_evaluated": False,
         "model_exported": False,
     }
+
+
+def select_model(results: dict) -> str:
+    if set(results) != set(MODEL_NAMES):
+        raise ValueError("Selection requires CV results for all three fixed candidates")
+    for name in MODEL_NAMES:
+        summary = results[name]["summary"]
+        if not np.isfinite([summary["ap_mean"], summary["roc_auc_mean"]]).all():
+            raise ValueError("Selection metrics must be finite")
+    # max returns the first candidate on an exact double tie, independent of dict order.
+    return max(MODEL_NAMES, key=lambda name: (
+        results[name]["summary"]["ap_mean"], results[name]["summary"]["roc_auc_mean"],
+    ))
 
 
 def refit_selected_on_training(
@@ -206,7 +224,7 @@ def refit_selected_on_training(
 ) -> RefitModel:
     """Stage 2: fresh Pipeline fit on all Training after an external CV-only choice.
 
-    The selection rule will be added in Prompt 3. This stage receives no Test data.
+    This stage receives no Test data.
     """
     _validate_training(training)
     pipe = _new_pipeline(selected_name, training.y, profile=profile)
@@ -214,20 +232,27 @@ def refit_selected_on_training(
     return RefitModel(pipe, selected_name, training.record_ids.copy(), profile)
 
 
-def evaluate_on_test(fitted: RefitModel, test: HeldOutTest) -> dict:
-    """Stage 3, opt-in by direct call AFTER selection/refit. Never called by CLI.
+def evaluate_on_test(fitted: RefitModel, test: HeldOutTest, *, threshold=CLASSIFICATION_THRESHOLD) -> dict:
+    """Stage 3: called once by train_version AFTER selection lock and refit.
 
     No parameter, feature, preprocessing or threshold selection happens here.
-    Prompt 2 tests this function only on a tiny artificial holdout.
+    Unit tests use a tiny artificial holdout; inference never calls this function.
     """
     if not isinstance(test, HeldOutTest):
         raise TypeError("Evaluation requires a separate HeldOutTest partition")
     if np.intersect1d(fitted.training_record_ids, test.record_ids).size:
         raise ValueError("Test IDs overlap the refit Training partition")
+    probabilities = fitted.pipeline.predict_proba(test.x)[:, 1]
+    labels = (probabilities >= threshold).astype(int)
     return {
         "model": fitted.model_name,
         "rows": len(test.x),
-        **probability_metrics(test.y, fitted.pipeline.predict_proba(test.x)[:, 1]),
+        **probability_metrics(test.y, probabilities),
+        "threshold": threshold,
+        "precision": float(precision_score(test.y, labels, zero_division=0)),
+        "recall": float(recall_score(test.y, labels, zero_division=0)),
+        "f1": float(f1_score(test.y, labels, zero_division=0)),
+        "confusion_matrix": confusion_matrix(test.y, labels, labels=[0, 1]).tolist(),
     }
 
 
@@ -388,21 +413,86 @@ def run_cv_smoke(sample_size: int = 150) -> dict:
 
 def train_and_export(*args, **kwargs):
     raise RuntimeError(
-        "Automatic training/evaluation/export is disabled. "
-        "Run training/train.py --mode cv for Training-only CV comparison, "
-        "or --mode cv-smoke for artificial-data checks. "
-        "Keep the existing synthetic serving artifacts until inference contracts are migrated."
+        "Compatibility auto-training entrypoint is disabled. "
+        "Use training/train.py --mode train --version NEW_VERSION for staged export, "
+        "then training.activate after reload/API verification. Never train at serving startup."
     )
+
+
+def train_version(frame, version: str, artifact_root=ROOT / "artifacts", *, partitions=None) -> dict:
+    """Full run: lock CV choice/threshold, refit Training, evaluate Test ONCE.
+
+    A new version directory is mandatory; existing versions are never overwritten.
+    Training does not change the active serving pointer.
+    """
+    import joblib
+    import sklearn
+    import xgboost
+    import re
+
+    if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._-]*", version):
+        raise ValueError("Version must contain only letters, digits, dots, hyphens or underscores")
+    destination = Path(artifact_root) / "versions" / version
+    destination.mkdir(parents=True, exist_ok=False)
+    training, test = partitions if partitions is not None else split_training_test(frame)
+    oof = {}
+    cv = compare_on_training(training, oof_predictions=oof)
+    selected = cv["selected_model"]
+    risk_review = {
+        "status": "disabled_pending_calibration",
+        "reason": "Legacy 0.20/0.45 bands were synthetic; OOF review alone does not validate business risk bands or calibrate balanced-class model probabilities.",
+        "source": "Training out-of-fold predictions only",
+        "legacy_thresholds": [0.2, 0.45],
+        "oof_checks": [{
+            "threshold": cutoff,
+            "predicted_positive_rows": int((oof[selected] >= cutoff).sum()),
+            "precision": float(precision_score(training.y, oof[selected] >= cutoff, zero_division=0)),
+            "recall": float(recall_score(training.y, oof[selected] >= cutoff, zero_division=0)),
+        } for cutoff in (0.2, 0.45)],
+    }
+    lock = {"cv": cv, "selected_model": selected, "classification_threshold": CLASSIFICATION_THRESHOLD,
+            "threshold_policy": "fixed_0.5_before_test", "risk_bands": risk_review}
+    (destination / "selection_lock.json").write_text(json.dumps(lock, indent=2), encoding="utf-8")
+    print(f"Selection locked: {selected}; threshold=0.5. Refitting Training only.", file=sys.stderr, flush=True)
+    fitted = refit_selected_on_training(training, selected)
+    joblib.dump(fitted.pipeline, destination / "credit_pipeline.joblib")
+    # Persist state BEFORE the only Test predict/metric call. Never tune from its results.
+    (destination / "test_evaluation_started.txt").write_text(datetime.now(timezone.utc).isoformat(), encoding="utf-8")
+    test_metrics = evaluate_on_test(fitted, test)
+    print("Independent Test evaluated once.", file=sys.stderr, flush=True)
+    sample = training.x.iloc[0].astype(object).where(training.x.iloc[0].notna(), None).to_dict()
+    sample["amount_unit"] = "HOME_CREDIT_SOURCE"
+    (destination / "sample_request.json").write_text(json.dumps(sample, indent=2), encoding="utf-8")
+    metadata = {
+        "version": version, "algorithm": selected, "training_dataset": DATASET,
+        "contract_version": CONTRACT_VERSION, "features": FEATURES,
+        "input_specification": FEATURE_SPEC, "amount_unit": "HOME_CREDIT_SOURCE",
+        "target_meaning": TARGET_MEANING, "positive_class": 1,
+        "n_rows": len(frame), "training_rows": len(training.y), "test_rows": len(test.y),
+        "split": {"test_size": 0.2, "stratify": TARGET, "random_state": 42},
+        "cv_results": cv, "selection_policy": SELECTION_POLICY,
+        "classification_threshold": CLASSIFICATION_THRESHOLD, "threshold_policy": "fixed_0.5_before_test",
+        "test_metrics": test_metrics, "test_evaluation_count": 1,
+        "risk_bands": risk_review, "probability_calibrated": False,
+        "credit_score_formula": "850 - 550 * payment_difficulty_probability (illustrative, not validated)",
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "pipeline_sha256": hashlib.sha256((destination / "credit_pipeline.joblib").read_bytes()).hexdigest(),
+        "libraries": {"sklearn": sklearn.__version__, "pandas": pd.__version__, "numpy": np.__version__, "xgboost": xgboost.__version__},
+    }
+    (destination / "model_metadata.json").write_text(json.dumps(metadata, indent=2), encoding="utf-8")
+    return metadata
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--mode", choices=("prepare", "cv", "cv-smoke"), default="prepare")
+    parser.add_argument("--mode", choices=("prepare", "cv", "cv-smoke", "train"), default="prepare")
+    parser.add_argument("--version", help="Required new version for --mode train; never activates automatically")
+    parser.add_argument("--artifact-root", type=Path, default=Path(os.environ.get("ARTIFACT_DIR", ROOT / "artifacts")))
     parser.add_argument("--application-csv")
     parser.add_argument("--description-csv")
     parser.add_argument("--data-dir")
     parser.add_argument("--sample-size", type=int, default=256, help="Preparation/CV-smoke sample size; real CV uses ALL Training")
-    parser.add_argument("--report", type=Path, help="Optional preparation/CV JSON (no model artifacts)")
+    parser.add_argument("--report", type=Path, help="Optional preparation/CV/final-results JSON outside model artifact directories")
     args = parser.parse_args()
     try:
         if args.mode == "cv-smoke":
@@ -415,7 +505,11 @@ def main():
             )
             # The internal Test is held aside before any fit, even preprocessing smoke.
             training, held_out = split_training_test(frame)
-            if args.mode == "cv":
+            if args.mode == "train":
+                if not args.version:
+                    raise ValueError("--mode train requires a new --version")
+                report = train_version(frame, args.version, args.artifact_root, partitions=(training, held_out))
+            elif args.mode == "cv":
                 report = compare_on_training(training)
                 report["application_csv"] = str(application_path)
                 report["description_csv"] = str(description_path)
@@ -427,7 +521,7 @@ def main():
                 "training_rows": len(training.x), "held_out_rows": len(held_out.record_ids),
                 "test_size": 0.2, "stratify": TARGET, "random_state": 42,
             }
-            report["test_evaluated"] = False
+            report["test_evaluated"] = args.mode == "train"
         if args.report:
             # Do not let a preparation report overwrite the active model or metadata.
             report_path = args.report.resolve()

@@ -9,27 +9,12 @@ from app.models.loan_application import LoanApplication
 
 
 def build_ml_payload(loan: LoanApplication, customer: Customer) -> dict:
-    age = customer.age
-    if age is None and customer.date_of_birth is not None:
-        from datetime import date
-
-        today = date.today()
-        born = customer.date_of_birth
-        age = today.year - born.year - ((today.month, today.day) < (born.month, born.day))
-    return {
-        "age": int(age or 30),
-        "occupation": customer.occupation,
-        "monthly_income": float(loan.monthly_income),
-        "years_employed": float(loan.years_employed),
-        "requested_amount": float(loan.requested_amount),
-        "term_months": int(loan.term_months),
-        "purpose": loan.purpose,
-        "current_debt": float(loan.current_debt),
-        "existing_loans": int(loan.existing_loans),
-        "late_payments": int(loan.late_payments),
-        "credit_history": loan.credit_history,
-        "dti": float(loan.dti or 0),
-    }
+    raise AppError(
+        "Hồ sơ cũ chưa đủ thông tin Home Credit. Dùng biểu mẫu /home-credit và bổ sung "
+        "AMT_CREDIT, AMT_ANNUITY, DAYS_BIRTH, DAYS_EMPLOYED, NAME_CONTRACT_TYPE, "
+        "OCCUPATION_TYPE cùng xác nhận thang tiền gốc. Không tự chuyển thu nhập tháng, kỳ hạn hoặc lịch sử trả nợ.",
+        status_code=422, code="HOME_CREDIT_INPUT_REQUIRED",
+    )
 
 
 def score_loan(loan: LoanApplication, customer: Customer) -> dict:
@@ -49,3 +34,21 @@ def score_loan(loan: LoanApplication, customer: Customer) -> dict:
 
 def decimal_safe(value) -> Decimal:
     return Decimal(str(round(float(value), 6)))
+
+
+def request_home_credit(method: str, path: str, payload: dict | None = None) -> dict:
+    """Forward the canonical ML contract unchanged; never build fake legacy inputs."""
+    from fastapi import HTTPException
+
+    try:
+        with httpx.Client(timeout=60.0) as client:
+            response = client.request(method, f"{get_settings().ml_service_url}{path}", json=payload)
+    except httpx.RequestError as exc:
+        raise AppError(f"Không kết nối được Home Credit ML Service: {exc}", 503, "ML_UNAVAILABLE") from exc
+    if response.status_code >= 400:
+        try:
+            detail = response.json().get("detail", response.text)
+        except ValueError:
+            detail = response.text
+        raise HTTPException(status_code=response.status_code if response.status_code < 500 else 503, detail=detail)
+    return response.json()

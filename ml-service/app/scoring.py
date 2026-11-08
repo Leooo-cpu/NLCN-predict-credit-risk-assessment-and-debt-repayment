@@ -1,187 +1,104 @@
 from __future__ import annotations
 
+import hashlib
 import json
 from pathlib import Path
 
 import joblib
 import numpy as np
-import pandas as pd
 
 from app.config import get_settings
-from app.feature_map import human_feature_name, impact_description
-from app.schemas import PredictRequest, PredictResponse, ShapFactor
-
-NUMERIC_FEATURES = [
-    "age",
-    "monthly_income",
-    "years_employed",
-    "requested_amount",
-    "term_months",
-    "current_debt",
-    "existing_loans",
-    "late_payments",
-    "dti",
-    "loan_to_income",
-    "debt_burden",
-]
-CATEGORICAL_FEATURES = ["occupation", "credit_history", "purpose"]
-
+from app.home_credit_features import (
+    CONTRACT_VERSION, DATASET, FEATURES, FEATURE_SPEC, TARGET_MEANING, frame_from_values,
+)
+from app.schemas import PredictRequest, PredictResponse
 
 _PIPELINE = None
 _METADATA: dict = {}
 
 
+def load_bundle(directory: Path):
+    directory = Path(directory)
+    info = json.loads((directory / "model_metadata.json").read_text(encoding="utf-8"))
+    binary = directory / "credit_pipeline.joblib"
+    if info.get("contract_version") != CONTRACT_VERSION or info.get("features") != FEATURES:
+        raise ValueError("Model input contract does not match the Home Credit API")
+    if info.get("input_specification") != FEATURE_SPEC or info.get("amount_unit") != "HOME_CREDIT_SOURCE":
+        raise ValueError("Model input types/units/missing-value contract does not match the API")
+    if info.get("training_dataset") != DATASET or info.get("positive_class") != 1:
+        raise ValueError("Model source or positive class does not match Home Credit")
+    if hashlib.sha256(binary.read_bytes()).hexdigest() != info.get("pipeline_sha256"):
+        raise ValueError("Pipeline checksum mismatch")
+    pipeline = joblib.load(binary)
+    if list(pipeline.feature_names_in_) != FEATURES or list(pipeline.classes_) != [0, 1]:
+        raise ValueError("Saved pipeline features/classes do not match metadata")
+    return pipeline, info
+
+
 def _ensure_loaded():
     global _PIPELINE, _METADATA
-    settings = get_settings()
     if _PIPELINE is None:
-        if not settings.pipeline_path.exists():
-            raise FileNotFoundError(
-                f"Serving pipeline not found: {settings.pipeline_path}. "
-                "Restore the existing synthetic artifact. Home Credit preparation "
-                "does not train or replace the serving model."
-            )
-        _PIPELINE = joblib.load(settings.pipeline_path)
-        if settings.metadata_path.exists():
-            _METADATA = json.loads(settings.metadata_path.read_text(encoding="utf-8"))
-        else:
-            _METADATA = {"version": "1.0.0-sim", "algorithm": "unknown"}
+        settings = get_settings()
+        root = Path(settings.artifact_dir)
+        pointer = root / "active_model.json"
+        if not pointer.is_file():
+            raise FileNotFoundError("No validated active Home Credit model. Run training.activate after version training; never retrain at startup.")
+        active = json.loads(pointer.read_text(encoding="utf-8"))
+        directory = (root / active["relative_dir"]).resolve()
+        if not directory.is_relative_to(root.resolve() / "versions"):
+            raise ValueError("Active model must be inside artifacts/versions")
+        pipeline, info = load_bundle(directory)
+        if info["version"] != active["version"]:
+            raise ValueError("Active model version mismatch")
+        _PIPELINE, _METADATA = pipeline, info
 
 
-def request_to_frame(payload: PredictRequest) -> pd.DataFrame:
-    income = max(payload.monthly_income, 1.0)
-    dti = payload.dti if payload.dti is not None else payload.current_debt / income
-    loan_to_income = payload.requested_amount / income
-    debt_burden = (payload.current_debt + payload.requested_amount) / income
-    row = {
-        "age": payload.age,
-        "occupation": payload.occupation,
-        "monthly_income": payload.monthly_income,
-        "years_employed": payload.years_employed,
-        "requested_amount": payload.requested_amount,
-        "term_months": payload.term_months,
-        "purpose": payload.purpose,
-        "current_debt": payload.current_debt,
-        "existing_loans": payload.existing_loans,
-        "late_payments": payload.late_payments,
-        "credit_history": payload.credit_history,
-        "dti": dti,
-        "loan_to_income": loan_to_income,
-        "debt_burden": debt_burden,
-    }
-    return pd.DataFrame([row])
-
-
-def _risk_and_score(default_p: float) -> tuple[str, float]:
-    settings = get_settings()
-    if default_p < settings.low_risk_threshold:
-        level = "LOW_RISK"
-    elif default_p < settings.medium_risk_threshold:
-        level = "MEDIUM_RISK"
-    else:
-        level = "HIGH_RISK"
-    score = settings.credit_score_max - settings.credit_score_range * default_p
-    score = float(max(300.0, min(settings.credit_score_max, round(score, 2))))
-    return level, score
-
-
-def _feature_names(pipeline) -> list[str]:
-    pre = pipeline.named_steps["preprocess"]
-    try:
-        return list(pre.get_feature_names_out())
-    except Exception:
-        return NUMERIC_FEATURES + CATEGORICAL_FEATURES
-
-
-def _raw_value_map(row: pd.Series) -> dict:
-    return {col: row[col] for col in row.index}
-
-
-def shap_factors(pipeline, frame: pd.DataFrame) -> list[ShapFactor]:
-    settings = get_settings()
-    row = frame.iloc[0]
-    raw_values = _raw_value_map(row)
-    try:
-        import shap
-
-        preprocess = pipeline.named_steps["preprocess"]
-        model = pipeline.named_steps["model"]
-        transformed = preprocess.transform(frame)
-        names = _feature_names(pipeline)
-        if hasattr(model, "predict_proba") and type(model).__name__ == "LogisticRegression":
-            explainer = shap.LinearExplainer(model, transformed)
-        else:
-            explainer = shap.TreeExplainer(model)
-        values = explainer.shap_values(transformed)
-        if isinstance(values, list):
-            values = values[1] if len(values) > 1 else values[0]
-        values = np.array(values)
-        if values.ndim > 1:
-            values = values[0]
-        pairs = list(zip(names, values))
-        pairs.sort(key=lambda item: abs(float(item[1])), reverse=True)
-        factors: list[ShapFactor] = []
-        for name, shap_value in pairs[: settings.shap_top_k]:
-            base_key = name.split("__")[-1] if "__" in name else name
-            raw_key = next((k for k in raw_values if k in base_key or base_key.startswith(k)), None)
-            feature_value = raw_values.get(raw_key, None) if raw_key else None
-            shap_f = float(shap_value)
-            factors.append(
-                ShapFactor(
-                    feature_name=human_feature_name(base_key),
-                    feature_value=feature_value if feature_value is not None else base_key,
-                    shap_value=round(shap_f, 6),
-                    impact="INCREASE_RISK" if shap_f > 0 else "DECREASE_RISK",
-                    description=impact_description(base_key, feature_value if feature_value is not None else base_key, shap_f),
-                )
-            )
-        return factors
-    except Exception:
-        return heuristic_factors(row)
-
-
-def heuristic_factors(row: pd.Series) -> list[ShapFactor]:
-    heuristics = [
-        ("late_payments", float(row["late_payments"]) / 10.0),
-        ("dti", float(row["dti"]) / 8.0),
-        ("debt_burden", float(row["debt_burden"]) / 12.0),
-        ("credit_history", 0.15 if row["credit_history"] == "POOR" else (-0.12 if row["credit_history"] == "GOOD" else 0.02)),
-        ("years_employed", -min(float(row["years_employed"]), 15) / 40.0),
-        ("monthly_income", -min(float(row["monthly_income"]), 5e7) / 2e8),
-        ("existing_loans", float(row["existing_loans"]) / 8.0),
-    ]
-    heuristics.sort(key=lambda item: abs(item[1]), reverse=True)
-    factors = []
-    for name, value in heuristics[:7]:
-        factors.append(
-            ShapFactor(
-                feature_name=human_feature_name(name),
-                feature_value=row[name],
-                shap_value=round(float(value), 6),
-                impact="INCREASE_RISK" if value > 0 else "DECREASE_RISK",
-                description=impact_description(name, row[name], value),
-            )
-        )
-    return factors
+def request_to_frame(payload: PredictRequest):
+    return frame_from_values(payload.model_dump())
 
 
 def predict(payload: PredictRequest) -> PredictResponse:
     _ensure_loaded()
     frame = request_to_frame(payload)
-    proba = float(_PIPELINE.predict_proba(frame)[0][1])
-    proba = min(0.999, max(0.001, proba))
-    level, score = _risk_and_score(proba)
+    probability = float(_PIPELINE.predict_proba(frame)[0, 1])
+    if not np.isfinite(probability) or not 0 <= probability <= 1:
+        raise ValueError("Model returned an invalid probability")
+    cleaned = _PIPELINE.named_steps["preprocess"].named_steps["clean"].transform(frame)
+    missing = cleaned.columns[cleaned.isna().iloc[0]].tolist()
     return PredictResponse(
-        default_probability=round(proba, 6),
-        repayment_probability=round(1.0 - proba, 6),
-        risk_level=level,
-        credit_score=score,
-        shap_explanation=shap_factors(_PIPELINE, frame),
-        model_version=_METADATA.get("version", "1.0.0-sim"),
-        algorithm=_METADATA.get("algorithm", "XGBoost"),
+        payment_difficulty_probability=probability,
+        other_outcome_probability=1 - probability,
+        predicted_payment_difficulty=probability >= _METADATA["classification_threshold"],
+        classification_threshold=_METADATA["classification_threshold"],
+        # Legacy risk-band defaults are deliberately not applied to Home Credit.
+        risk_level="NOT_VALIDATED", risk_bands_validated=False,
+        credit_score=round(max(300, min(850, 850 - 550 * probability)), 2),
+        model_version=_METADATA["version"], algorithm=_METADATA["algorithm"],
+        data_source=_METADATA["training_dataset"], outcome_definition=TARGET_MEANING["1"],
+        imputed_features=missing,
     )
 
 
 def metadata() -> dict:
     _ensure_loaded()
     return _METADATA
+
+
+def input_contract() -> dict:
+    _ensure_loaded()
+    specs = {name: dict(spec) for name, spec in FEATURE_SPEC.items()}
+    encoder = _PIPELINE.named_steps["preprocess"].named_steps["columns"].named_transformers_["cat"].named_steps["encoder"]
+    specs["OCCUPATION_TYPE"]["choices"] = [value for value in encoder.categories_[1].tolist() if value != "__MISSING__"]
+    return {
+        "contract_version": CONTRACT_VERSION, "features": specs,
+        "amount_unit": "HOME_CREDIT_SOURCE", "json_schema": PredictRequest.model_json_schema(),
+        "missing_policy": "Every key required. Explicit null only for nullable fields; fitted Pipeline imputes it.",
+    }
+
+
+def sample_request() -> dict:
+    _ensure_loaded()
+    root = Path(get_settings().artifact_dir)
+    # Use the version actually loaded by this worker; activation requires restart.
+    sample = json.loads((root / "versions" / _METADATA["version"] / "sample_request.json").read_text(encoding="utf-8"))
+    return PredictRequest.model_validate(sample).model_dump()

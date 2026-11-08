@@ -57,8 +57,8 @@ def test_three_models_each_run_five_identical_folds(cv_run):
     _, training, test, report, created = cv_run
     assert len(created) == 15
     assert set(report["models"]) == set(train.MODEL_NAMES)
-    assert report["selected_model"] is None
-    assert report["selection_policy"] == "pending_prompt_3"
+    assert report["selected_model"] == train.select_model(report["models"])
+    assert report["selection_policy"] == train.SELECTION_POLICY
     assert report["test_evaluated"] is False
     expected = list(StratifiedKFold(n_splits=5, shuffle=True, random_state=42).split(training.x, training.y))
     reference_fingerprints = None
@@ -88,7 +88,7 @@ def test_three_models_each_run_five_identical_folds(cv_run):
             assert result["summary"][f"{metric}_mean"] == pytest.approx(np.mean(scores))
             assert result["summary"][f"{metric}_std"] == pytest.approx(np.std(scores, ddof=0))
         assert result["selection_inputs"] == result["summary"]
-        assert result["selection_score"] is None
+        assert "selection_score" not in result
 
 
 def test_every_pipeline_and_preprocessor_is_new_and_fit_only_on_four_folds(cv_run):
@@ -148,7 +148,8 @@ def test_refit_and_test_evaluation_are_separate_stages(monkeypatch):
     metrics = train.evaluate_on_test(fitted, test)
     assert len(calls) == before  # evaluate only transforms/predicts; no fit.
     assert metrics["rows"] == 30
-    assert set(metrics) == {"model", "rows", "ap", "roc_auc"}
+    assert set(metrics) == {"model", "rows", "ap", "roc_auc", "threshold", "precision", "recall", "f1", "confusion_matrix"}
+    assert metrics["threshold"] == 0.5
     with pytest.raises(ValueError, match="overlap"):
         train.evaluate_on_test(fitted, train.HeldOutTest(training.x, training.y, training.record_ids))
 

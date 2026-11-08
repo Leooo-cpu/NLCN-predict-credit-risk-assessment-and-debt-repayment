@@ -25,7 +25,7 @@ export function Layout() {
             Hồ sơ vay
           </NavLink>
           <NavLink to="/risk-assessment" className={linkClass}>
-            Đánh giá rủi ro
+            Home Credit
           </NavLink>
           <NavLink to="/predictions" className={linkClass}>
             Lịch sử dự đoán

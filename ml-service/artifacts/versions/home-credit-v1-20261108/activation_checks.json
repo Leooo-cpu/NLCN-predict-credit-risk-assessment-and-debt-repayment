@@ -1,0 +1,27 @@
+{
+  "version": "home-credit-v1-20261108",
+  "pipeline_reloaded": true,
+  "valid_request_status": 200,
+  "missing_field_status": 422,
+  "forbidden_fields_status": 422,
+  "prediction": {
+    "payment_difficulty_probability": 0.6411752700805664,
+    "other_outcome_probability": 0.3588247299194336,
+    "predicted_payment_difficulty": true,
+    "classification_threshold": 0.5,
+    "risk_level": "NOT_VALIDATED",
+    "risk_bands_validated": false,
+    "credit_score": 497.35,
+    "credit_score_is_simulated": true,
+    "model_version": "home-credit-v1-20261108",
+    "algorithm": "XGBoost",
+    "data_source": "Home Credit Default Risk / application_train.csv",
+    "outcome_definition": "Client with payment difficulties: late payment more than X days on at least one of the first Y installments (X/Y not disclosed).",
+    "probability_calibrated": false,
+    "imputed_features": [],
+    "shap_explanation": [],
+    "explanation_note": "Chưa triển khai SHAP cho hợp đồng Home Credit; không dùng heuristic mô phỏng.",
+    "disclaimer": "Ước lượng sự kiện TARGET=1 của Home Credit; 1-p không phải bảo đảm trả nợ đầy đủ. Điểm chỉ minh họa."
+  },
+  "sample_source": "one Training record, features only; TARGET/SK_ID_CURR excluded"
+}

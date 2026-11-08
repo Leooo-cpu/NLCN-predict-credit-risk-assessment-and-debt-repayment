@@ -6,7 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.config import get_settings
 from app.core.exceptions import register_exception_handlers
 from app.database import SessionLocal, init_db
-from app.routers import auth, customers, dashboard, loans, models, users
+from app.routers import auth, customers, dashboard, loans, models, users, home_credit
 from app.seed import seed_if_needed
 
 settings = get_settings()
@@ -50,6 +50,7 @@ app.include_router(customers.router)
 app.include_router(loans.router)
 app.include_router(dashboard.router)
 app.include_router(models.router)
+app.include_router(home_credit.router)
 
 
 @app.get("/health")

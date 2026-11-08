@@ -89,8 +89,8 @@ def test_serving_does_not_train_when_artifact_is_missing(tmp_path, monkeypatch):
 
     monkeypatch.setattr(scoring, "_PIPELINE", None)
     monkeypatch.setattr(scoring, "get_settings", lambda: SimpleNamespace(
-        pipeline_path=tmp_path / "credit_pipeline.joblib",
+        artifact_dir=tmp_path,
     ))
-    with pytest.raises(FileNotFoundError, match="Restore the existing synthetic artifact"):
+    with pytest.raises(FileNotFoundError, match="No validated active Home Credit"):
         scoring._ensure_loaded()
     assert list(tmp_path.iterdir()) == []

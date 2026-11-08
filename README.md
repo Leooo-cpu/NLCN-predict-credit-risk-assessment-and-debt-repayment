@@ -1,10 +1,10 @@
 # Hệ thống hỗ trợ đánh giá rủi ro tín dụng và dự đoán khả năng trả nợ bằng máy học
 
 **Đề tài Niên luận Kỹ thuật phần mềm**  
-Hệ thống **hỗ trợ** cán bộ tín dụng ước lượng xác suất vỡ nợ bằng Machine Learning và Explainable AI (SHAP), **không** thay thế quyết định cấp tín dụng thực tế, **không** kết nối ngân hàng thật và **không** dùng dữ liệu cá nhân thật.
+Hệ thống **hỗ trợ** cán bộ tín dụng ước lượng rủi ro gặp khó khăn thanh toán theo Home Credit bằng Machine Learning, **không** thay thế quyết định cấp tín dụng thực tế và **không** kết nối ngân hàng thật. Hồ sơ và giải thích SHAP mô phỏng cũ được giữ để xem lịch sử.
 
 > **Cảnh báo bắt buộc:** Kết quả chỉ mang tính hỗ trợ đánh giá rủi ro, không thay thế quyết định cấp tín dụng thực tế.  
-> **Nguồn dữ liệu:** Kết quả và metadata demo cũ vẫn dùng dữ liệu mô phỏng. Luồng chuẩn bị dữ liệu mới dùng Home Credit Default Risk, chưa đánh giá hay triển khai mô hình mới. Xem [hợp đồng và kiểm tra Home Credit](docs/home_credit_preparation.md).
+> **Nguồn dữ liệu:** Mô hình đang phục vụ là Home Credit `home-credit-v1-20261108`, đã kiểm tra tải lại và API. Hồ sơ, kết quả và metadata demo cũ vẫn giữ nguồn mô phỏng. Xem [kết quả huấn luyện và tích hợp](docs/home_credit_release.md).
 
 ---
 
@@ -79,10 +79,11 @@ cp .env.example .env
 docker compose up --build
 ```
 
-ML Service cần artifact demo `credit_pipeline.joblib` tương thích trong volume
-`ml_artifacts`. Checkout không chứa binary này; bước chuẩn bị Home Credit không
-tạo nó và dịch vụ không còn tự huấn luyện khi khởi động. Khôi phục artifact demo
-hiện có trước khi chạy luồng dự đoán.
+ML Service cần `active_model.json` và thư mục phiên bản Home Credit tương ứng trong
+volume `ml_artifacts`. Binary mô hình được lưu cục bộ và Git bỏ qua. Với volume cũ,
+phải sao chép bản phiên bản đã xác minh cùng manifest vào volume hoặc huấn luyện và
+kích hoạt trong môi trường đó. Không tự huấn luyện lúc khởi động. Docker chưa được
+kiểm tra trên máy hiện tại vì không có lệnh Docker.
 
 **Các cổng truy cập:**
 - **Frontend App:** [http://localhost:3000](http://localhost:3000)
@@ -97,8 +98,7 @@ hiện có trước khi chạy luồng dự đoán.
 ```bash
 cd ml-service
 python -m pip install -r requirements.txt
-# Cần khôi phục artifact demo credit_pipeline.joblib có sẵn để chạy dự đoán.
-# training/train.py hiện chỉ kiểm tra Home Credit, không tạo artifact phục vụ.
+# Cần artifact Home Credit đã train và activate theo mục 7.
 uvicorn app.main:app --host 0.0.0.0 --port 8001 --reload
 ```
 
@@ -134,30 +134,49 @@ python -m pytest
 
 ---
 
-## 7. Chuẩn bị Home Credit (chưa huấn luyện mô hình)
+## 7. Huấn luyện và phục vụ Home Credit
 
-Prompt 2 đã bổ sung luồng so sánh Logistic Regression, Random Forest và XGBoost
-bằng 5-fold trên 80% Training; refit và đánh giá 20% Test được tách thành các hàm
-riêng. Mặc định vẫn chỉ chuẩn bị dữ liệu. Xem [quy trình CV và kiểm tra dữ liệu nhỏ](docs/home_credit_training_cv.md).
+Chỉ dùng bảng có nhãn `application_train.csv`. Chia phân tầng một lần 80% Training /
+20% Test với `random_state=42`. Trên Training, cả ba mô hình chạy cùng 5 fold phân tầng
+(`shuffle=True`, `random_state=42`), mỗi lượt fit Pipeline mới. Chọn **AP CV trung bình
+cao nhất**, hòa thì ROC-AUC CV trung bình, vẫn hòa thì Logistic Regression → Random
+Forest → XGBoost. Không dùng điểm tổng hợp hoặc kết quả Test để chọn thuật toán.
+
+Ngưỡng phân loại **0,5** được cố định trước khi mở Test. Fit lại toàn bộ Pipeline trên
+Training, đánh giá mô hình đã chốt **một lần** trên Test. Không dùng `application_test.csv`
+Kaggle để đánh giá. Hai ngưỡng nhóm rủi ro 0,20/0,45 cũ chỉ được kiểm tra bằng OOF của
+Training và đang **tắt**; phản hồi mới là `NOT_VALIDATED`, xác suất chưa hiệu chỉnh.
 
 ```powershell
 # Kiểm tra 15 lượt CV bằng 150 dòng nhân tạo; không đọc CSV thật hay đánh giá Test thật.
 & './ml-service/.venv/Scripts/python.exe' ml-service/training/train.py --mode cv-smoke --sample-size 150
 ```
 
-```bash
-cd ml-service
-python training/train.py
+```powershell
+# Từ gốc repo; dùng tên phiên bản MỚI khi tái lập, không ghi đè phiên bản hiện có.
+$env:HOME_CREDIT_DATA_DIR = 'D:/HK1_nam_4/CT250H_nien_luan_chuyen_nganh/home-credit-default-risk'
+& './ml-service/.venv/Scripts/python.exe' ml-service/training/train.py --mode train --version home-credit-v1-repro --report docs/home_credit_repro_results.json
+Push-Location ml-service
+& './.venv/Scripts/python.exe' -m training.activate --version home-credit-v1-repro
+Pop-Location
 ```
 
 Lệnh tự tìm CSV trong thư mục `home-credit-default-risk` bên trong hoặc cạnh repo;
 có thể truyền `--application-csv`, `--description-csv`, `--data-dir` hoặc biến môi trường.
-Nó đọc bảng có nhãn, kiểm tra dữ liệu và fit Pipeline trên một mẫu nhỏ đã chia tập.
-Không tự sinh dữ liệu mô phỏng, không đánh giá classifier, không ghi mô hình/metrics/plots
-vào thư mục artifacts. `train_and_export()` bị chặn ở bước này.
+`--mode prepare` (mặc định) chỉ audit và thử tiền xử lý trên mẫu Training;
+`--mode cv` chỉ so sánh CV; `--mode train --version ...` chạy đầy đủ và lưu candidate.
+Không fallback sang dữ liệu mô phỏng nếu CSV lỗi. Các biến `HOME_CREDIT_APPLICATION_CSV`
+và `HOME_CREDIT_DESCRIPTION_CSV` hỗ trợ cấu hình từng tệp. `ARTIFACT_DIR` cấu hình nơi
+ML Service nạp manifest; nếu dùng đường dẫn khác, truyền cùng nơi đó cho training/activation.
+
+Candidate nằm ở `ml-service/artifacts/versions/<version>/`: Pipeline chứa classifier,
+metadata CV/Test, khóa lựa chọn trước Test, yêu cầu mẫu và báo cáo kiểm tra API.
+Chỉ lệnh activate mới cập nhật `active_model.json`, sau khi reload và kiểm tra API thành công.
+Điểm hồ sơ `850 - 550*p` vẫn là minh họa, tách biệt hoàn toàn với tiêu chí AP chọn thuật toán.
 
 Định nghĩa thuộc tính, bảng đối chiếu, kết quả kiểm tra thực tế, lệnh PowerShell và
 Docker: [Home Credit preparation](docs/home_credit_preparation.md).
+Kết quả thật và giới hạn: [Home Credit release](docs/home_credit_release.md).
 
 ---
 
@@ -167,10 +186,9 @@ Docker: [Home Credit preparation](docs/home_credit_preparation.md).
 2. **Dashboard:** Xem thống kê hồ sơ, biểu đồ tròn phân bố rủi ro, phân bố điểm tín dụng mô phỏng.
 3. **Quản lý khách hàng:** Vào menu **Khách hàng**, bấm xem hoặc tạo mới khách hàng mẫu.
 4. **Hồ sơ vay:** Vào menu **Hồ sơ vay**, bấm **Import CSV** chọn tệp `database/sample_loan_import.csv` để nạp dữ liệu nhanh.
-5. **Đánh giá rủi ro & SHAP:** Mở một hồ sơ bất kỳ, bấm **Đánh giá rủi ro** (hoặc mở menu **Đánh giá rủi ro**), xem:
-   - Điểm tín dụng mô phỏng (300 - 850).
-   - Xác suất vỡ nợ vs Khả năng trả nợ.
-   - Nhóm rủi ro (LOW, MEDIUM, HIGH) và đề xuất xử lý hồ sơ.
-   - Biểu đồ SHAP thanh ngang với yếu tố tăng (đỏ) và giảm (xanh) rủi ro.
+5. **Home Credit:** Mở menu Home Credit, nạp hồ sơ mẫu từ Training hoặc bổ sung 6 trường
+   theo hợp đồng. Không mặc định số tiền là VND. Xem ước lượng TARGET=1, lớp ở ngưỡng
+   0,5 và nguồn/phiên bản mô hình. Không có SHAP giả hoặc tự gán nhóm rủi ro cũ.
+   Các trang kết quả hồ sơ cũ chỉ xem lịch sử mô phỏng.
 6. **Lịch sử dự đoán:** Vào menu **Lịch sử dự đoán**, lọc theo nhóm rủi ro, mở modal xem chi tiết SHAP của các lượt đánh giá cũ.
 7. **Phân quyền:** Đăng xuất và đăng nhập tài khoản `admin@credit-risk.com` / `Admin@123456` để kiểm tra trang **Người dùng** và **Mô hình**.
