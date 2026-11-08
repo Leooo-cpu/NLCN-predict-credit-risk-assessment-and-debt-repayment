@@ -40,9 +40,9 @@ export function CreditCaseDetailPage({ mode = "loans" }: { mode?: "customers" | 
     </section>
     <div className="flex gap-3">
       {mode === "customers" && <Link className="btn-ghost" to={`/loans/${record.id}`}>Xem kết quả và lịch sử</Link>}
-      {mode !== "assessment" && user?.role !== "RISK_VIEWER" && <Link className="btn-primary" to={`/risk-assessment/${record.id}`}>Đánh giá rủi ro hồ sơ này</Link>}
+      {mode !== "assessment" && (user?.role === "ADMIN" || user?.role === "OFFICER") && <Link className="btn-primary" to={`/risk-assessment/${record.id}`}>Đánh giá rủi ro hồ sơ này</Link>}
     </div>
-    {mode === "assessment" && user?.role !== "RISK_VIEWER" && <CreditCaseForm record={record} onSaved={setRecord} onPredicted={prediction => {
+    {mode === "assessment" && (user?.role === "ADMIN" || user?.role === "OFFICER") && <CreditCaseForm record={record} onSaved={setRecord} onPredicted={prediction => {
       setSelected(prediction); setHistory(previous => [prediction, ...previous]); setRecord(previous => previous ? { ...previous, latest_prediction: prediction } : previous);
     }} />}
     {mode !== "customers" && (selected ? <CasePredictionCard prediction={selected} revision={record.input_revision} /> : <div className="card">Chưa có dự đoán cho hồ sơ này. {mode === "assessment" ? "Kiểm tra thông tin phía trên rồi bấm “Dự đoán và lưu kết quả”." : "Chọn “Đánh giá rủi ro hồ sơ này” để thực hiện dự đoán."}</div>)}

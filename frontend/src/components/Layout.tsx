@@ -24,7 +24,7 @@ export function Layout() {
           <NavLink to="/loans" className={linkClass}>
             Hồ sơ và dự đoán
           </NavLink>
-          {user?.role !== "RISK_VIEWER" && <NavLink to="/risk-assessment" className={linkClass}>
+          {(user?.role === "ADMIN" || user?.role === "OFFICER") && <NavLink to="/risk-assessment" className={linkClass}>
             Đánh giá rủi ro
           </NavLink>}
           <NavLink to="/predictions" className={linkClass}>

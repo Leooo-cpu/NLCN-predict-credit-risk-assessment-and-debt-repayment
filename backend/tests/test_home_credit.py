@@ -7,6 +7,7 @@ import pytest
 from app.core.exceptions import AppError
 from app.services import ml_client
 from tests.conftest import login
+from app.core.security import create_access_token
 
 
 def test_legacy_loans_require_new_real_inputs():
@@ -34,5 +35,5 @@ def test_live_backend_home_credit_bridge(client, monkeypatch):
     assert client.post("/api/home-credit/predict", headers=headers, json={"monthly_income": 10000000}).status_code == 422
     assert client.post("/api/home-credit/predict", headers=headers, json={**sample, "TARGET": 1}).status_code == 422
     assert client.post("/api/home-credit/predict", json=sample).status_code == 401
-    viewer = login(client, "viewer@test.com", "Viewer@123456")
-    assert client.post("/api/home-credit/predict", headers={"Authorization": f"Bearer {viewer}"}, json=sample).status_code == 403
+    viewer = create_access_token("viewer@test.com", "RISK_VIEWER")
+    assert client.post("/api/home-credit/predict", headers={"Authorization": f"Bearer {viewer}"}, json=sample).status_code == 401

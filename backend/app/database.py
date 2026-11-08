@@ -39,5 +39,7 @@ def get_db() -> Generator[Session, None, None]:
 
 def init_db() -> None:
     from app import models  # noqa: F401
+    from app.migrations import apply_migrations
 
     Base.metadata.create_all(bind=engine)
+    apply_migrations(engine)

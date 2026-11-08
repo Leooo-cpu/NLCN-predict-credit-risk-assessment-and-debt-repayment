@@ -8,8 +8,9 @@ from app.seed import ensure_default_users
 def test_fresh_demo_accounts_login_with_expected_roles(client):
     with SessionLocal() as db:
         users = ensure_default_users(db)
-        assert [u.email for u in users] == [f"{name}@credit-risk.com" for name in ("admin", "officer", "viewer")]
-    for name, role in [("Admin", "ADMIN"), ("Officer", "CREDIT_OFFICER"), ("Viewer", "RISK_VIEWER")]:
+        assert [u.email for u in users] == [f"{name}@credit-risk.com" for name in ("admin", "officer")]
+        assert db.query(User).filter(User.email.in_(["viewer@credit-risk.com", "viewer@credit-risk.local"])).count() == 0
+    for name, role in [("Admin", "ADMIN"), ("Officer", "OFFICER")]:
         response = client.post("/api/auth/login", json={"email": f"{name.lower()}@credit-risk.com", "password": f"{name}@123456"})
         assert response.status_code == 200
         assert response.json()["user"]["role"] == role
@@ -18,7 +19,7 @@ def test_fresh_demo_accounts_login_with_expected_roles(client):
 def test_legacy_rename_preserves_identity_and_password(client):
     with SessionLocal() as db:
         originals = []
-        for name in ("admin", "officer", "viewer"):
+        for name in ("admin", "officer"):
             user = db.query(User).filter_by(email=f"{name}@test.com").one()
             user.email = f"{name}@credit-risk.local"
             originals.append((user.id, user.role, user.hashed_password, user.is_active))

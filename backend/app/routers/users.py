@@ -66,10 +66,13 @@ def update_user(
     if user is None:
         raise NotFoundError("Không tìm thấy người dùng")
     data = payload.model_dump(exclude_unset=True)
+    if "role" in data and data["role"] not in ALL_ROLES:
+        raise AppError("Chỉ hỗ trợ vai trò ADMIN hoặc OFFICER", 400)
+    if user.role not in ALL_ROLES:
+        if "role" in data or data.get("is_active") is True:
+            raise AppError("Tài khoản vai trò cũ chỉ được giữ để đọc lịch sử, không thể mở khóa hoặc chuyển vai trò", 400)
     if "password" in data and data["password"]:
         user.hashed_password = hash_password(data.pop("password"))
-    if "role" in data and data["role"] and data["role"] not in ALL_ROLES:
-        raise AppError("Vai trò không hợp lệ", 400)
     for key, value in data.items():
         setattr(user, key, value)
     db.commit()

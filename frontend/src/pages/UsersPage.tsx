@@ -11,7 +11,7 @@ export function UsersPage() {
   const [page, setPage] = useState(1);
   const [q, setQ] = useState("");
   const [loading, setLoading] = useState(true);
-  const [form, setForm] = useState({ email: "", full_name: "", password: "", role: "CREDIT_OFFICER" as Role });
+  const [form, setForm] = useState({ email: "", full_name: "", password: "", role: "OFFICER" as Role });
   const toast = useToast();
 
   async function load(p = page) {
@@ -38,7 +38,7 @@ export function UsersPage() {
     try {
       await api.post("/api/users", form);
       toast.success("Đã tạo người dùng");
-      setForm({ email: "", full_name: "", password: "", role: "CREDIT_OFFICER" });
+      setForm({ email: "", full_name: "", password: "", role: "OFFICER" });
       load(1);
     } catch (err) {
       toast.error(errorMessage(err));
@@ -74,7 +74,7 @@ export function UsersPage() {
                     <td>{u.email}</td>
                     <td>{u.role}</td>
                     <td>{u.is_active ? "Hoạt động" : "Khóa"}</td>
-                    <td><button className="text-brand-600" onClick={() => toggle(u)}>{u.is_active ? "Khóa" : "Mở"}</button></td>
+                    <td>{u.role === "ADMIN" || u.role === "OFFICER" ? <button className="text-brand-600" onClick={() => toggle(u)}>{u.is_active ? "Khóa" : "Mở"}</button> : <span className="text-slate-500">Vai trò đã ngừng sử dụng</span>}</td>
                   </tr>
                 ))}
               </tbody>
@@ -90,8 +90,7 @@ export function UsersPage() {
         <input className="input" type="password" placeholder="Mật khẩu" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} required />
         <select className="input" value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value as Role })}>
           <option value="ADMIN">ADMIN</option>
-          <option value="CREDIT_OFFICER">CREDIT_OFFICER</option>
-          <option value="RISK_VIEWER">RISK_VIEWER</option>
+          <option value="OFFICER">OFFICER</option>
         </select>
         <button className="btn-primary w-full">Tạo</button>
       </form>

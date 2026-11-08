@@ -4,7 +4,7 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 from fastapi import APIRouter, Depends
 
-from app.core.roles import ADMIN, CREDIT_OFFICER, RISK_VIEWER
+from app.core.roles import ADMIN, OFFICER
 from app.database import get_db
 from app.dependencies import require_roles
 from app.models.customer import Customer
@@ -28,7 +28,7 @@ DISCLAIMER = "Kết quả chỉ mang tính hỗ trợ đánh giá rủi ro, khô
 @router.get("/summary", response_model=DashboardSummary)
 def summary(
     db: Session = Depends(get_db),
-    _: User = Depends(require_roles(ADMIN, CREDIT_OFFICER, RISK_VIEWER)),
+    _: User = Depends(require_roles(ADMIN, OFFICER)),
 ):
     total_applications = db.query(func.count(LoanApplication.id)).scalar() or 0
     total_customers = db.query(func.count(Customer.id)).scalar() or 0

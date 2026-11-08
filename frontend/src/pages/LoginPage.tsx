@@ -8,7 +8,6 @@ import type { Role } from "../types";
 const demoAccounts = [
   { label: "Admin", email: "admin@credit-risk.com", password: "Admin@123456" },
   { label: "Officer", email: "officer@credit-risk.com", password: "Officer@123456" },
-  { label: "Viewer", email: "viewer@credit-risk.com", password: "Viewer@123456" },
 ];
 
 export function LoginPage() {
@@ -19,7 +18,7 @@ export function LoginPage() {
   const [email, setEmail] = useState("officer@credit-risk.com");
   const [password, setPassword] = useState("Officer@123456");
   const [fullName, setFullName] = useState("");
-  const [role, setRole] = useState<Role>("CREDIT_OFFICER");
+  const [role, setRole] = useState<Role>("OFFICER");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -55,8 +54,7 @@ export function LoginPage() {
           <>
             <input className="input" placeholder="Họ tên" value={fullName} onChange={(e) => setFullName(e.target.value)} required />
             <select className="input" value={role} onChange={(e) => setRole(e.target.value as Role)}>
-              <option value="CREDIT_OFFICER">Cán bộ tín dụng</option>
-              <option value="RISK_VIEWER">Người xem rủi ro</option>
+              <option value="OFFICER">Cán bộ tín dụng</option>
             </select>
           </>
         )}

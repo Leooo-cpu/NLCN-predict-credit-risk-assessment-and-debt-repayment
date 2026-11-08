@@ -19,8 +19,7 @@ logger = logging.getLogger(__name__)
 def ensure_default_users(db: Session) -> list[User]:
     specs = [
         ("admin@credit-risk.com" if settings.admin_email.lower() == "admin@credit-risk.local" else settings.admin_email.lower(), settings.admin_full_name, settings.admin_password, "ADMIN"),
-        ("officer@credit-risk.com", "Cán bộ tín dụng Demo", "Officer@123456", "CREDIT_OFFICER"),
-        ("viewer@credit-risk.com", "Người xem rủi ro Demo", "Viewer@123456", "RISK_VIEWER"),
+        ("officer@credit-risk.com", "Cán bộ tín dụng Demo", "Officer@123456", "OFFICER"),
     ]
     # Preflight all demo addresses before modifying any record. Prefer existing
     # .com users; never merge accounts, change roles, or reset stored passwords.
@@ -28,7 +27,7 @@ def ensure_default_users(db: Session) -> list[User]:
     for email, name, password, role in specs:
         user = db.query(User).filter(User.email == email).first()
         legacy_email = email.removesuffix(".com") + ".local" if email in {
-            "admin@credit-risk.com", "officer@credit-risk.com", "viewer@credit-risk.com"
+            "admin@credit-risk.com", "officer@credit-risk.com"
         } else None
         legacy = db.query(User).filter(User.email == legacy_email).first() if legacy_email else None
         selected = user if user is not None else legacy
@@ -217,6 +216,6 @@ def ensure_demo_records(db: Session, officer: User) -> None:
 
 def seed_if_needed(db: Session) -> None:
     users = ensure_default_users(db)
-    officer = next((u for u in users if u.role == "CREDIT_OFFICER"), users[0])
+    officer = next((u for u in users if u.role == "OFFICER"), users[0])
     # Keep accounts, but never recreate synthetic customers/results after replacement.
     # Home Credit records are imported explicitly from the real labeled CSV.

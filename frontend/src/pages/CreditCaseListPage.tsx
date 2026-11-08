@@ -35,7 +35,7 @@ export function CreditCaseListPage({ mode = "customers" }: { mode?: "customers" 
       <input className="input max-w-sm" placeholder="Tìm theo tên hoặc mã hồ sơ nguồn" value={q} onChange={event => setQ(event.target.value)} />
       {!customers && <select aria-label="Trạng thái dự đoán" className="input w-48" value={status} onChange={event => setStatus(event.target.value)}><option value="">Mọi trạng thái</option><option value="true">Đã có dự đoán</option><option value="false">Chưa dự đoán</option></select>}
       <button className="btn-primary">Tìm kiếm</button>
-      {user?.role !== "RISK_VIEWER" && <Link className="btn-ghost" to={customers ? "/customers/new" : "/risk-assessment"}>{customers ? "Thêm hồ sơ khách hàng" : "Đánh giá rủi ro"}</Link>}
+      {(user?.role === "ADMIN" || user?.role === "OFFICER") && <Link className="btn-ghost" to={customers ? "/customers/new" : "/risk-assessment"}>{customers ? "Thêm hồ sơ khách hàng" : "Đánh giá rủi ro"}</Link>}
     </form>
     <p>{total.toLocaleString("vi-VN")} hồ sơ phù hợp</p>
     {loading ? <Loading /> : <div className="card overflow-auto"><table className="table">
@@ -44,7 +44,7 @@ export function CreditCaseListPage({ mode = "customers" }: { mode?: "customers" 
         <td><Link className="text-brand-600 font-medium" to={`/${customers ? "customers" : "loans"}/${item.id}`}>{item.display_name}</Link><div className="text-xs text-slate-500">Mã hồ sơ: {item.source_application_id ?? item.id}</div></td>
         <td>{Number(item.inputs_json.AMT_CREDIT).toLocaleString("vi-VN")}</td><td>{item.inputs_json.NAME_CONTRACT_TYPE}</td>
         <td>{customers ? item.inputs_json.OCCUPATION_TYPE ?? "Không rõ" : item.latest_prediction ? <><strong>{pct(item.latest_prediction.payment_difficulty_probability)}</strong> khó khăn thanh toán{item.latest_prediction.input_revision !== item.input_revision && <div className="text-amber-700">Thông tin đã thay đổi — cần dự đoán lại</div>}</> : "Chưa dự đoán"}</td>
-        <td><Link className="text-brand-600 underline" to={`/${customers ? "customers" : "loans"}/${item.id}`}>{customers ? "Xem thông tin" : "Xem kết quả"}</Link>{!customers && user?.role !== "RISK_VIEWER" && <Link className="block text-brand-600 underline" to={`/risk-assessment/${item.id}`}>Đánh giá hồ sơ</Link>}</td>
+        <td><Link className="text-brand-600 underline" to={`/${customers ? "customers" : "loans"}/${item.id}`}>{customers ? "Xem thông tin" : "Xem kết quả"}</Link>{!customers && (user?.role === "ADMIN" || user?.role === "OFFICER") && <Link className="block text-brand-600 underline" to={`/risk-assessment/${item.id}`}>Đánh giá hồ sơ</Link>}</td>
       </tr>)}{!items.length && <tr><td colSpan={5}>Chưa có hồ sơ. Cần nạp application_train.csv bằng lệnh import Home Credit.</td></tr>}</tbody>
     </table><Pager page={page} pageSize={10} total={total} onPage={load} /></div>}
   </div>;

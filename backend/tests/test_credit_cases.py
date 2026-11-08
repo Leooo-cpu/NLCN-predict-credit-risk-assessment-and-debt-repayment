@@ -17,6 +17,7 @@ from app.models.model_prediction import ModelPrediction
 from app.models.user import User
 from app.routers import credit_cases
 from tests.conftest import login
+from app.core.security import create_access_token
 
 INPUTS = {"AMT_CREDIT": 227520.0, "AMT_ANNUITY": 13189.5, "DAYS_BIRTH": -12298,
           "DAYS_EMPLOYED": -946, "NAME_CONTRACT_TYPE": "Cash loans", "OCCUPATION_TYPE": "Laborers",
@@ -42,8 +43,9 @@ def ml_stub(monkeypatch):
 
 
 def headers(client, role="officer"):
-    email, password = ("officer@test.com", "Officer@123456") if role == "officer" else ("viewer@test.com", "Viewer@123456")
-    return {"Authorization": f"Bearer {login(client, email, password)}"}
+    if role == "viewer":
+        return {"Authorization": f"Bearer {create_access_token('viewer@test.com', 'RISK_VIEWER')}"}
+    return {"Authorization": f"Bearer {login(client, 'officer@test.com', 'Officer@123456')}"}
 
 
 def test_create_save_predict_reload_and_history_are_linked(client, ml_stub):
@@ -77,13 +79,13 @@ def test_create_save_predict_reload_and_history_are_linked(client, ml_stub):
 def test_read_only_missing_record_validation_and_ml_failure(client, ml_stub, monkeypatch):
     auth = headers(client)
     viewer = headers(client, "viewer")
-    assert client.post("/api/credit-cases", headers=viewer, json={"display_name": "x", "inputs": INPUTS}).status_code == 403
+    assert client.post("/api/credit-cases", headers=viewer, json={"display_name": "x", "inputs": INPUTS}).status_code == 401
     assert client.get("/api/credit-cases").status_code == 401
     assert client.get("/api/credit-cases/999", headers=auth).status_code == 404
     assert client.post("/api/credit-cases", headers=auth, json={"display_name": "x", "inputs": {"TARGET": 1}}).status_code == 422
     case = client.post("/api/credit-cases", headers=auth, json={"display_name": "x", "inputs": INPUTS}).json()
-    assert client.get(f"/api/credit-cases/{case['id']}", headers=viewer).status_code == 200
-    assert client.post(f"/api/credit-cases/{case['id']}/score", headers=viewer, json={"expected_revision": 1}).status_code == 403
+    assert client.get(f"/api/credit-cases/{case['id']}", headers=viewer).status_code == 401
+    assert client.post(f"/api/credit-cases/{case['id']}/score", headers=viewer, json={"expected_revision": 1}).status_code == 401
     monkeypatch.setattr(credit_cases, "request_home_credit", lambda *args: (_ for _ in ()).throw(HTTPException(503, "ML offline")))
     assert client.post(f"/api/credit-cases/{case['id']}/score", headers=auth, json={"expected_revision": 1}).status_code == 503
     assert client.get(f"/api/credit-cases/{case['id']}/predictions", headers=auth).json() == []

@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, File, Query, UploadFile
 from sqlalchemy.orm import Session, joinedload
 
 from app.core.exceptions import AppError, NotFoundError
-from app.core.roles import ADMIN, CREDIT_OFFICER, RISK_VIEWER
+from app.core.roles import ADMIN, OFFICER
 from app.database import get_db
 from app.dependencies import require_roles
 from app.models.customer import Customer
@@ -56,7 +56,7 @@ def _attach_latest(db: Session, loans: list[LoanApplication]) -> list[LoanApplic
 def create_loan(
     payload: LoanApplicationCreate,
     db: Session = Depends(get_db),
-    current: User = Depends(require_roles(ADMIN, CREDIT_OFFICER)),
+    current: User = Depends(require_roles(ADMIN, OFFICER)),
 ):
     customer = db.query(Customer).filter(Customer.id == payload.customer_id).first()
     if customer is None:
@@ -85,7 +85,7 @@ def list_loans(
     page: int = Query(1, ge=1),
     page_size: int = Query(10, ge=1, le=100),
     db: Session = Depends(get_db),
-    _: User = Depends(require_roles(ADMIN, CREDIT_OFFICER, RISK_VIEWER)),
+    _: User = Depends(require_roles(ADMIN, OFFICER)),
 ):
     query = db.query(LoanApplication).options(joinedload(LoanApplication.customer))
     if q:
@@ -108,7 +108,7 @@ def list_all_predictions(
     page: int = Query(1, ge=1),
     page_size: int = Query(10, ge=1, le=100),
     db: Session = Depends(get_db),
-    _: User = Depends(require_roles(ADMIN, CREDIT_OFFICER, RISK_VIEWER)),
+    _: User = Depends(require_roles(ADMIN, OFFICER)),
 ):
     query = (
         db.query(ModelPrediction)
@@ -150,7 +150,7 @@ def list_all_predictions(
 def get_loan(
     loan_application_id: int,
     db: Session = Depends(get_db),
-    _: User = Depends(require_roles(ADMIN, CREDIT_OFFICER, RISK_VIEWER)),
+    _: User = Depends(require_roles(ADMIN, OFFICER)),
 ):
     loan = (
         db.query(LoanApplication)
@@ -169,7 +169,7 @@ def update_loan(
     loan_application_id: int,
     payload: LoanApplicationUpdate,
     db: Session = Depends(get_db),
-    current: User = Depends(require_roles(ADMIN, CREDIT_OFFICER)),
+    current: User = Depends(require_roles(ADMIN, OFFICER)),
 ):
     loan = db.query(LoanApplication).filter(LoanApplication.id == loan_application_id).first()
     if loan is None:
@@ -188,7 +188,7 @@ def update_loan(
 def import_loans(
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
-    current: User = Depends(require_roles(ADMIN, CREDIT_OFFICER)),
+    current: User = Depends(require_roles(ADMIN, OFFICER)),
 ):
     if not file.filename or not file.filename.lower().endswith(".csv"):
         raise AppError("Chỉ hỗ trợ file CSV", 400)
@@ -257,7 +257,7 @@ def import_loans(
 def score_application(
     loan_application_id: int,
     db: Session = Depends(get_db),
-    current: User = Depends(require_roles(ADMIN, CREDIT_OFFICER)),
+    current: User = Depends(require_roles(ADMIN, OFFICER)),
 ):
     loan = (
         db.query(LoanApplication)
@@ -310,7 +310,7 @@ def score_application(
 def list_predictions(
     loan_application_id: int,
     db: Session = Depends(get_db),
-    _: User = Depends(require_roles(ADMIN, CREDIT_OFFICER, RISK_VIEWER)),
+    _: User = Depends(require_roles(ADMIN, OFFICER)),
 ):
     loan = db.query(LoanApplication).filter(LoanApplication.id == loan_application_id).first()
     if loan is None:

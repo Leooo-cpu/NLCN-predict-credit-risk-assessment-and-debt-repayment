@@ -27,7 +27,7 @@ function AdminOnly({ children }: { children: ReactElement }) {
 
 function WriterOnly({ children }: { children: ReactElement }) {
   const { user } = useAuth();
-  if (user?.role === "RISK_VIEWER") return <Navigate to="/loans" replace />;
+  if (user?.role !== "ADMIN" && user?.role !== "OFFICER") return <Navigate to="/loans" replace />;
   return children;
 }
 

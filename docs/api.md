@@ -16,7 +16,7 @@ Tất cả API trừ `/api/auth/register`, `/api/auth/login`, `/health` yêu c�
 
 ## Auth
 
-- `POST /api/auth/register` — đăng ký CREDIT_OFFICER hoặc RISK_VIEWER
+- `POST /api/auth/register` — đăng ký OFFICER
 - `POST /api/auth/login` — `{email, password}` → `{access_token, user}`
 - `GET /api/auth/me`
 
@@ -66,7 +66,7 @@ Tất cả API trừ `/api/auth/register`, `/api/auth/login`, `/health` yêu c�
 ## Home Credit (luồng mới)
 
 - `GET /api/home-credit/input-schema`, `GET /api/home-credit/sample`: mọi vai trò đã đăng nhập.
-- `POST /api/home-credit/predict`: ADMIN/CREDIT_OFFICER; backend chuyển nguyên hợp đồng đến ML,
+- `POST /api/home-credit/predict`: ADMIN/OFFICER; backend chuyển nguyên hợp đồng đến ML,
   giữ lỗi 422 từng trường, không chuyển hồ sơ mô phỏng hoặc lưu vào cột kết quả lịch sử cũ.
 
 Yêu cầu mẫu đã chạy, không chứa TARGET/SK_ID_CURR:

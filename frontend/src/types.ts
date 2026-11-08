@@ -1,10 +1,10 @@
-export type Role = "ADMIN" | "CREDIT_OFFICER" | "RISK_VIEWER";
+export type Role = "ADMIN" | "OFFICER";
 
 export interface User {
   id: number;
   email: string;
   full_name: string;
-  role: Role;
+  role: string; // Historical inactive accounts can retain a retired role.
   is_active: boolean;
   created_at: string;
   updated_at: string;

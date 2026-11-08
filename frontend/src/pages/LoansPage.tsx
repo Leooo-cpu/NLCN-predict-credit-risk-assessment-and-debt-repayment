@@ -18,7 +18,7 @@ export function LoansPage() {
   const [uploading, setUploading] = useState(false);
   const toast = useToast();
   const { user } = useAuth();
-  const canWrite = user?.role !== "RISK_VIEWER";
+  const canWrite = (user?.role === "ADMIN" || user?.role === "OFFICER");
 
   async function load(p = page) {
     setLoading(true);

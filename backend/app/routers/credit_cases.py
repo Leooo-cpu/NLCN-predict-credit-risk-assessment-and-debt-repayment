@@ -5,7 +5,7 @@ from sqlalchemy import String, cast, or_, update, func
 from sqlalchemy.orm import Session, joinedload
 
 from app.core.exceptions import AppError, NotFoundError
-from app.core.roles import ADMIN, CREDIT_OFFICER, RISK_VIEWER
+from app.core.roles import ADMIN, OFFICER
 from app.database import get_db
 from app.dependencies import require_roles
 from app.models.credit_case import CreditCase, CreditPrediction
@@ -15,8 +15,8 @@ from app.services.audit import write_audit
 from app.services.ml_client import request_home_credit
 
 router = APIRouter(prefix="/api/credit-cases", tags=["customer-credit-assessments"])
-read = require_roles(ADMIN, CREDIT_OFFICER, RISK_VIEWER)
-write = require_roles(ADMIN, CREDIT_OFFICER)
+read = require_roles(ADMIN, OFFICER)
+write = require_roles(ADMIN, OFFICER)
 
 
 def get_case(db, case_id):

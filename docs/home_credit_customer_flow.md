@@ -31,9 +31,9 @@ của dòng CSV ban đầu, không tự biến thành ground truth cho đầu v�
 6. Muốn thêm hồ sơ riêng: **Thêm hồ sơ khách hàng**, nhập tên/mã và các giá trị thật
    theo hợp đồng mô hình. Không tự suy từ thu nhập tháng hoặc các mặc định demo cũ.
 
-`/home-credit` và `/risk-assessment` nay đưa về danh sách hồ sơ; không còn bắt người
-dùng dùng một màn hình demo tách khỏi khách hàng. RISK_VIEWER chỉ đọc, không sửa hoặc
-dự đoán. Hồ sơ bị sửa sẽ làm kết quả cũ có cảnh báo không còn ứng với revision hiện tại.
+`/home-credit` đưa về danh sách khách hàng. `/risk-assessment` cho phép chọn hồ sơ có sẵn
+hoặc nhập hồ sơ mới để dự đoán. Chỉ ADMIN và OFFICER đăng nhập và thao tác;
+khách hàng không cần tài khoản. Hồ sơ bị sửa sẽ làm kết quả cũ có cảnh báo không còn ứng với revision hiện tại.
 Mỗi kết quả lịch sử vẫn giữ snapshot riêng. Request revision cũ trả 409, lỗi ML không
 tạo kết quả giả. API kiểm tra đầu vào trực tiếp bằng schema canonical của ML Service.
 

@@ -7,7 +7,7 @@ class RegisterRequest(BaseModel):
     email: EmailStr
     full_name: str = Field(min_length=2, max_length=255)
     password: str = Field(min_length=8, max_length=128)
-    role: str = Field(default="CREDIT_OFFICER")
+    role: str = Field(default="OFFICER")
 
 
 class LoginRequest(BaseModel):

@@ -22,7 +22,7 @@ def get_current_user(
     if not email:
         raise UnauthorizedError("Token không chứa thông tin người dùng")
     user = db.query(User).filter(User.email == email).first()
-    if user is None or not user.is_active:
+    if user is None or not user.is_active or user.role not in ALL_ROLES:
         raise UnauthorizedError("Tài khoản không tồn tại hoặc đã bị khóa")
     return user
 

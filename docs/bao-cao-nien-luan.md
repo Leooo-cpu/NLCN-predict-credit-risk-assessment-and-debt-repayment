@@ -72,7 +72,7 @@ Hệ thống được thiết kế theo kiến trúc hướng dịch vụ với 
 ## 3. PHÂN TÍCH & THIẾT KẾ CƠ SỞ DỮ LIỆU
 
 ### 3.1. Sơ đồ thực thể liên kết (ERD)
-1. **`users`:** Quản lý người dùng, email, mật khẩu hash, họ tên, vai trò (`ADMIN`, `CREDIT_OFFICER`, `RISK_VIEWER`).
+1. **`users`:** Quản lý người dùng, email, mật khẩu hash, họ tên, vai trò (`ADMIN`, `OFFICER`).
 2. **`customers`:** Lưu trữ thông tin khách hàng (họ tên, tuổi, nghề nghiệp, thu nhập hàng tháng, số năm công tác, lịch sử tín dụng, số lần chậm trả, dư nợ hiện tại, số khoản vay).
 3. **`loan_applications`:** Lưu trữ chi tiết hồ sơ đề nghị vay (khách hàng, số tiền vay, kỳ hạn vay, mục đích vay, tỷ lệ nợ trên thu nhập DTI, trạng thái hồ sơ).
 4. **`model_predictions`:** Lưu trữ chi tiết từng lượt chấm điểm (mã hồ sơ, phiên bản mô hình, xác suất vỡ nợ, khả năng trả nợ, điểm tín dụng mô phỏng, phân nhóm rủi ro, `explanation_json` chứa SHAP).
@@ -81,8 +81,7 @@ Hệ thống được thiết kế theo kiến trúc hướng dịch vụ với 
 
 ### 3.2. Cơ chế phân quyền RBAC (Role-Based Access Control)
 - **ADMIN:** Toàn quyền quản trị tài khoản người dùng, xem toàn bộ dữ liệu hệ thống, quản lý mô hình máy học.
-- **CREDIT_OFFICER (Cán bộ tín dụng):** Tạo và cập nhật khách hàng, tạo hồ sơ vay, import danh sách hồ sơ từ CSV, kích hoạt chạy đánh giá rủi ro (scoring).
-- **RISK_VIEWER (Người xem rủi ro):** Chỉ có quyền đọc (read-only) bảng điều khiển, xem danh sách hồ sơ, xem kết quả đánh giá rủi ro và lịch sử dự đoán.
+- **OFFICER (Cán bộ tín dụng):** Tạo và cập nhật khách hàng, tạo hồ sơ vay, import danh sách hồ sơ từ CSV, kích hoạt chạy đánh giá rủi ro (scoring).
 
 ---
 
@@ -159,12 +158,9 @@ Hệ thống sẽ tự động:
 - **Quản trị viên (ADMIN):**
   - Email: `admin@credit-risk.com`
   - Mật khẩu: `Admin@123456`
-- **Cán bộ tín dụng (CREDIT_OFFICER):**
+- **Cán bộ tín dụng (OFFICER):**
   - Email: `officer@credit-risk.com`
   - Mật khẩu: `Officer@123456`
-- **Người xem rủi ro (RISK_VIEWER):**
-  - Email: `viewer@credit-risk.com`
-  - Mật khẩu: `Viewer@123456`
 
 ---
 

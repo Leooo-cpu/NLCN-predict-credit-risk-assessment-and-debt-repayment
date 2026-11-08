@@ -21,7 +21,7 @@ export function RiskAssessmentResultPage() {
   const [loading, setLoading] = useState(false);
   const toast = useToast();
   const { user } = useAuth();
-  const canScore = user?.role === "ADMIN" || user?.role === "CREDIT_OFFICER";
+  const canScore = user?.role === "ADMIN" || user?.role === "OFFICER";
 
   // Load list of available loans for quick selection
   useEffect(() => {

@@ -37,7 +37,7 @@ def client():
             email="officer@test.com",
             full_name="Officer Test",
             hashed_password=hash_password("Officer@123456"),
-            role="CREDIT_OFFICER",
+            role="OFFICER",
             is_active=True,
         )
     )
@@ -47,7 +47,7 @@ def client():
             full_name="Viewer Test",
             hashed_password=hash_password("Viewer@123456"),
             role="RISK_VIEWER",
-            is_active=True,
+            is_active=False,  # Historical account, never an active role.
         )
     )
     db.commit()

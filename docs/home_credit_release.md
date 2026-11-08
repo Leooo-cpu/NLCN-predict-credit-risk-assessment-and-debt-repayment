@@ -122,7 +122,7 @@ là quy tắc báo cáo độc lập; không tối ưu lại sau khi xem Test.
   Xác suất mẫu 0.6411752701, lớp 1 ở 0.5; đây là dự đoán minh họa trên Training,
   không phải chỉ số đánh giá mô hình.
 - Backend đã được kiểm tra qua ML HTTP thật ở 127.0.0.1:18001: sample/predict **200**,
-  request cũ/nhãn thừa **422**, chưa đăng nhập **401**, RISK_VIEWER dự đoán **403**;
+   request cũ/nhãn thừa **422**, chưa đăng nhập **401**, RISK_VIEWER dự đoán **403** (kết quả lịch sử trước khi ngừng vai trò Viewer; hiện tài khoản/token Viewer trả **401**);
   `/api/models/current` trả đúng phiên bản phục vụ.
 - **27 kiểm thử ML qua**, **12 kiểm thử backend qua** (có live bridge), TypeScript
   `--noEmit` và Vite production build thành công. Không đánh giá lại Test thật trong tests.

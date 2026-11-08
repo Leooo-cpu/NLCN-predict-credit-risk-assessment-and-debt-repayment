@@ -16,7 +16,7 @@ export function LoanDetailPage() {
   const [loading, setLoading] = useState(true);
   const toast = useToast();
   const { user } = useAuth();
-  const canScore = user?.role === "ADMIN" || user?.role === "CREDIT_OFFICER";
+  const canScore = user?.role === "ADMIN" || user?.role === "OFFICER";
 
   async function load() {
     if (!id) return;

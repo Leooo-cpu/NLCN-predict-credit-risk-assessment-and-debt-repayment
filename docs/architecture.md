@@ -32,8 +32,7 @@ Hệ thống hỗ trợ đánh giá rủi ro tín dụng theo mô hình 3 dịch
 | Vai trò | Quyền |
 |---|---|
 | ADMIN | Người dùng, toàn bộ dữ liệu, dashboard, mô hình |
-| CREDIT_OFFICER | CRUD khách hàng/hồ sơ, chạy score |
-| RISK_VIEWER | Chỉ xem dashboard, hồ sơ, kết quả, mô hình |
+| OFFICER | CRUD khách hàng/hồ sơ, chạy score |
 
 ## Thành phần
 
