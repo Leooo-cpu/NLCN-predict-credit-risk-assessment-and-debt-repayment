@@ -46,6 +46,10 @@ ml-service/artifacts/*.joblib
 ml-service/artifacts/plots/
 ml-service/data/raw/
 ml-service/data/processed/
+**/home-credit-default-risk/*.csv
+**/application_train.csv
+**/application_test.csv
+**/HomeCredit_columns_description.csv
 !ml-service/artifacts/.gitkeep
 
 # Database

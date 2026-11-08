@@ -36,9 +36,11 @@ def _ensure_loaded():
     settings = get_settings()
     if _PIPELINE is None:
         if not settings.pipeline_path.exists():
-            from training.train import train_and_export
-
-            train_and_export(settings.artifact_dir)
+            raise FileNotFoundError(
+                f"Serving pipeline not found: {settings.pipeline_path}. "
+                "Restore the existing synthetic artifact. Home Credit preparation "
+                "does not train or replace the serving model."
+            )
         _PIPELINE = joblib.load(settings.pipeline_path)
         if settings.metadata_path.exists():
             _METADATA = json.loads(settings.metadata_path.read_text(encoding="utf-8"))

@@ -11,7 +11,7 @@ settings = get_settings()
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
-    # Load or train on startup so /predict sẵn sàng cho demo
+    # Load the existing demo artifact only; preparation never trains on startup.
     try:
         metadata()
     except Exception as exc:  # noqa: BLE001

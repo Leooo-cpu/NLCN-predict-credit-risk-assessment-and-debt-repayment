@@ -5,6 +5,7 @@
 **/.pytest_cache
 **/*.db
 .git
+**/home-credit-default-risk/*.csv
 frontend/dist
 ml-service/artifacts/*.joblib
 ml-service/artifacts/plots

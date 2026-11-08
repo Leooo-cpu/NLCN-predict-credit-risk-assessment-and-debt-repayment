@@ -4,7 +4,7 @@
 Hệ thống **hỗ trợ** cán bộ tín dụng ước lượng xác suất vỡ nợ bằng Machine Learning và Explainable AI (SHAP), **không** thay thế quyết định cấp tín dụng thực tế, **không** kết nối ngân hàng thật và **không** dùng dữ liệu cá nhân thật.
 
 > **Cảnh báo bắt buộc:** Kết quả chỉ mang tính hỗ trợ đánh giá rủi ro, không thay thế quyết định cấp tín dụng thực tế.  
-> **Dữ liệu mô phỏng:** Toàn bộ khách hàng, hồ sơ vay và tập dữ liệu huấn luyện đều là dữ liệu mô phỏng (synthetic data).
+> **Nguồn dữ liệu:** Kết quả và metadata demo cũ vẫn dùng dữ liệu mô phỏng. Luồng chuẩn bị dữ liệu mới dùng Home Credit Default Risk, chưa đánh giá hay triển khai mô hình mới. Xem [hợp đồng và kiểm tra Home Credit](docs/home_credit_preparation.md).
 
 ---
 
@@ -79,6 +79,11 @@ cp .env.example .env
 docker compose up --build
 ```
 
+ML Service cần artifact demo `credit_pipeline.joblib` tương thích trong volume
+`ml_artifacts`. Checkout không chứa binary này; bước chuẩn bị Home Credit không
+tạo nó và dịch vụ không còn tự huấn luyện khi khởi động. Khôi phục artifact demo
+hiện có trước khi chạy luồng dự đoán.
+
 **Các cổng truy cập:**
 - **Frontend App:** [http://localhost:3000](http://localhost:3000)
 - **Backend API Docs (Swagger):** [http://localhost:8000/docs](http://localhost:8000/docs)
@@ -92,7 +97,8 @@ docker compose up --build
 ```bash
 cd ml-service
 python -m pip install -r requirements.txt
-python training/train.py
+# Cần khôi phục artifact demo credit_pipeline.joblib có sẵn để chạy dự đoán.
+# training/train.py hiện chỉ kiểm tra Home Credit, không tạo artifact phục vụ.
 uvicorn app.main:app --host 0.0.0.0 --port 8001 --reload
 ```
 
@@ -128,26 +134,21 @@ python -m pytest
 
 ---
 
-## 7. Huấn luyện lại mô hình máy học
+## 7. Chuẩn bị Home Credit (chưa huấn luyện mô hình)
 
 ```bash
 cd ml-service
 python training/train.py
 ```
 
-Quy trình huấn luyện:
-- Tự động sinh tập dữ liệu mô phỏng có nhãn tại `data/simulated_credit_risk.csv`.
-- So sánh 3 mô hình: **Logistic Regression**, **Random Forest**, **XGBoost** dựa trên:
-  $$\text{Score} = 0.45 \times \text{ROC-AUC} + 0.35 \times \text{PR-AUC} + 0.20 \times \text{F1}$$
-- Không đánh giá chỉ theo Accuracy do phân phối dữ liệu thực tế mất cân bằng.
-- Xuất artifacts vào `artifacts/`:
-  - `credit_pipeline.joblib`: Pipeline hoàn chỉnh (Imputer, Scaler, Encoder, Model).
-  - `model_metadata.json`: Siêu dữ liệu phiên bản và metrics.
-  - `plots/roc_curve.png`: Biểu đồ đường cong ROC.
-  - `plots/pr_curve.png`: Biểu đồ đường cong Precision-Recall.
-  - `plots/confusion_matrix.png`: Ma trận nhầm lẫn.
-  - `plots/feature_importance.png`: Tầm quan trọng của các đặc trưng.
-  - `plots/shap_summary.png`: Biểu đồ phân tích SHAP Summary.
+Lệnh tự tìm CSV trong thư mục `home-credit-default-risk` bên trong hoặc cạnh repo;
+có thể truyền `--application-csv`, `--description-csv`, `--data-dir` hoặc biến môi trường.
+Nó đọc bảng có nhãn, kiểm tra dữ liệu và fit Pipeline trên một mẫu nhỏ đã chia tập.
+Không tự sinh dữ liệu mô phỏng, không đánh giá classifier, không ghi mô hình/metrics/plots
+vào thư mục artifacts. `train_and_export()` bị chặn ở bước này.
+
+Định nghĩa thuộc tính, bảng đối chiếu, kết quả kiểm tra thực tế, lệnh PowerShell và
+Docker: [Home Credit preparation](docs/home_credit_preparation.md).
 
 ---
 

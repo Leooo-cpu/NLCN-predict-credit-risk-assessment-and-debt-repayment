@@ -1,0 +1,18 @@
+# Optional, one-shot preparation service. Does not mount serving artifacts.
+services:
+  home-credit-prepare:
+    profiles: ["prepare"]
+    build:
+      context: ./ml-service
+      dockerfile: Dockerfile
+    environment:
+      HOME_CREDIT_DATA_DIR: /datasets/home-credit-default-risk
+    volumes:
+      - type: bind
+        source: ${HOME_CREDIT_DATA_DIR:-../home-credit-default-risk}
+        target: /datasets/home-credit-default-risk
+        read_only: true
+      - type: bind
+        source: ./docs
+        target: /audit
+    command: ["python", "training/train.py", "--sample-size", "256", "--report", "/audit/home_credit_audit.json"]

@@ -1,5 +1,7 @@
+"""Prepare labeled Home Credit data only; evaluation/export are gated for now."""
 from __future__ import annotations
 
+import argparse
 import json
 import os
 import sys
@@ -9,276 +11,173 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-import joblib
-import matplotlib
-
-matplotlib.use("Agg")
-import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-from sklearn.compose import ColumnTransformer
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.impute import SimpleImputer
-from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import (
-    accuracy_score,
-    average_precision_score,
-    confusion_matrix,
-    f1_score,
-    precision_recall_curve,
-    precision_score,
-    recall_score,
-    roc_auc_score,
-    roc_curve,
+from sklearn.model_selection import train_test_split
+
+from app.home_credit_features import (
+    CATEGORICAL, CONTRACT_VERSION, DATASET, FEATURES, ID_COLUMN, NUMERIC,
+    SPECIAL_CATEGORIES, TARGET, TARGET_MEANING, build_preprocessor, validate_features,
 )
-from sklearn.model_selection import StratifiedKFold, train_test_split
-from sklearn.pipeline import Pipeline
-from sklearn.preprocessing import OneHotEncoder, StandardScaler
-from xgboost import XGBClassifier
-
-from training.generate_data import generate_simulated_dataset
-
-NUMERIC = [
-    "age",
-    "monthly_income",
-    "years_employed",
-    "requested_amount",
-    "term_months",
-    "current_debt",
-    "existing_loans",
-    "late_payments",
-    "dti",
-    "loan_to_income",
-    "debt_burden",
-]
-CATEGORICAL = ["occupation", "credit_history", "purpose"]
-TARGET = "default"
 
 
-def build_preprocessor() -> ColumnTransformer:
-    numeric_pipe = Pipeline(
-        steps=[
-            ("imputer", SimpleImputer(strategy="median")),
-            ("scaler", StandardScaler()),
+def resolve_csv(explicit, env_name: str, filename: str, data_dir=None) -> Path:
+    """Explicit path > per-file env > data dir/env > repo/sibling discovery.
+
+    An invalid explicit override fails; it never silently selects another file.
+    Relative paths are interpreted relative to the process working directory.
+    """
+    override = explicit or os.environ.get(env_name)
+    directory = data_dir or os.environ.get("HOME_CREDIT_DATA_DIR")
+    if override:
+        candidates = [Path(override)]
+    elif directory:
+        candidates = [Path(directory) / filename]
+    else:
+        repo = ROOT.parent
+        candidates = [
+            repo / "home-credit-default-risk" / filename,
+            repo.parent / "home-credit-default-risk" / filename,
+            ROOT / "data" / "home-credit-default-risk" / filename,
         ]
-    )
-    categorical_pipe = Pipeline(
-        steps=[
-            ("imputer", SimpleImputer(strategy="most_frequent")),
-            ("encoder", OneHotEncoder(handle_unknown="ignore")),
-        ]
-    )
-    return ColumnTransformer(
-        transformers=[
-            ("num", numeric_pipe, NUMERIC),
-            ("cat", categorical_pipe, CATEGORICAL),
-        ]
+    candidates = [path.expanduser().resolve() for path in candidates]
+    for path in candidates:
+        if path.is_file():
+            return path
+    tried = "\n  ".join(str(path) for path in candidates)
+    raise FileNotFoundError(
+        f"Missing {filename}. Tried:\n  {tried}\n"
+        f"Pass a CSV path or set {env_name} / HOME_CREDIT_DATA_DIR. No simulated fallback."
     )
 
 
-def evaluate(y_true, y_proba, threshold: float = 0.5) -> dict:
-    y_pred = (y_proba >= threshold).astype(int)
+def load_home_credit(application_csv=None, description_csv=None, data_dir=None):
+    application_path = resolve_csv(application_csv, "HOME_CREDIT_APPLICATION_CSV", "application_train.csv", data_dir)
+    # A supplied application path also locates its adjacent dictionary by default.
+    dictionary_dir = data_dir
+    if dictionary_dir is None and not os.environ.get("HOME_CREDIT_DATA_DIR"):
+        dictionary_dir = application_path.parent
+    description_path = resolve_csv(description_csv, "HOME_CREDIT_DESCRIPTION_CSV", "HomeCredit_columns_description.csv", dictionary_dir)
+    if application_path.name.lower() != "application_train.csv":
+        raise ValueError("This preparation step only accepts labeled application_train.csv")
+    try:
+        frame = pd.read_csv(application_path)
+        # The official description file contains non-UTF8 bytes (e.g. accented words).
+        descriptions = pd.read_csv(description_path, encoding="cp1252")
+    except (ValueError, OSError, UnicodeError) as exc:
+        raise ValueError(f"Could not read Home Credit CSVs ({application_path}, {description_path}): {exc}") from exc
+    required = [ID_COLUMN, TARGET, *FEATURES, "AMT_INCOME_TOTAL"]
+    missing = sorted(set(required) - set(frame.columns))
+    if missing:
+        raise ValueError(f"application_train.csv is missing required columns: {missing}")
+    if frame.empty or frame[TARGET].isna().any() or set(frame[TARGET].unique()) != {0, 1}:
+        raise ValueError("TARGET must be complete binary labels containing both 0 and 1")
+    if frame[ID_COLUMN].isna().any() or frame[ID_COLUMN].duplicated().any():
+        raise ValueError("SK_ID_CURR must be nonmissing and unique; duplicate application IDs found")
+    if not {"Table", "Row", "Description"}.issubset(descriptions.columns):
+        raise ValueError("Description CSV must contain Table, Row and Description columns")
+    dictionary = descriptions[descriptions["Table"].eq("application_{train|test}.csv")]
+    absent = sorted(set(required) - set(dictionary["Row"]))
+    if absent:
+        raise ValueError(f"Description CSV lacks application definitions for: {absent}")
+    validate_features(frame.loc[:, FEATURES])
+    return frame, dictionary, application_path, description_path
+
+
+def audit_dataset(frame, dictionary, application_path, description_path) -> dict:
+    special = {}
+    for name in frame.select_dtypes(include=["object", "string"]).columns:
+        counts = {value: int(frame[name].eq(value).sum()) for value in SPECIAL_CATEGORIES}
+        if any(counts.values()):
+            special[name] = {key: count for key, count in counts.items() if count}
+    definitions = dictionary.set_index("Row")["Description"].to_dict()
     return {
-        "accuracy": float(accuracy_score(y_true, y_pred)),
-        "precision": float(precision_score(y_true, y_pred, zero_division=0)),
-        "recall": float(recall_score(y_true, y_pred, zero_division=0)),
-        "f1": float(f1_score(y_true, y_pred, zero_division=0)),
-        "roc_auc": float(roc_auc_score(y_true, y_proba)),
-        "pr_auc": float(average_precision_score(y_true, y_proba)),
-        "confusion_matrix": confusion_matrix(y_true, y_pred).tolist(),
-        "selection_score": float(
-            0.45 * roc_auc_score(y_true, y_proba)
-            + 0.35 * average_precision_score(y_true, y_proba)
-            + 0.20 * f1_score(y_true, y_pred, zero_division=0)
-        ),
-    }
-
-
-def candidate_models(pos_weight: float) -> dict:
-    return {
-        "LogisticRegression": LogisticRegression(
-            max_iter=400, class_weight="balanced", solver="lbfgs"
-        ),
-        "RandomForest": RandomForestClassifier(
-            n_estimators=120,
-            max_depth=10,
-            min_samples_leaf=4,
-            class_weight="balanced",
-            random_state=42,
-            n_jobs=-1,
-        ),
-        "XGBoost": XGBClassifier(
-            n_estimators=160,
-            max_depth=5,
-            learning_rate=0.08,
-            subsample=0.9,
-            colsample_bytree=0.9,
-            scale_pos_weight=pos_weight,
-            eval_metric="logloss",
-            random_state=42,
-            n_jobs=-1,
-        ),
-    }
-
-
-def save_plots(y_true, y_proba, y_pred, feature_names, importances, out_dir: Path) -> None:
-    out_dir.mkdir(parents=True, exist_ok=True)
-    fpr, tpr, _ = roc_curve(y_true, y_proba)
-    plt.figure()
-    plt.plot(fpr, tpr)
-    plt.plot([0, 1], [0, 1], linestyle="--")
-    plt.title("ROC Curve (dữ liệu mô phỏng)")
-    plt.xlabel("FPR")
-    plt.ylabel("TPR")
-    plt.savefig(out_dir / "roc_curve.png", bbox_inches="tight")
-    plt.close()
-
-    precision, recall, _ = precision_recall_curve(y_true, y_proba)
-    plt.figure()
-    plt.plot(recall, precision)
-    plt.title("Precision-Recall Curve (dữ liệu mô phỏng)")
-    plt.xlabel("Recall")
-    plt.ylabel("Precision")
-    plt.savefig(out_dir / "pr_curve.png", bbox_inches="tight")
-    plt.close()
-
-    cm = confusion_matrix(y_true, y_pred)
-    plt.figure()
-    plt.imshow(cm, cmap="Blues")
-    plt.title("Confusion Matrix (dữ liệu mô phỏng)")
-    plt.colorbar()
-    for (i, j), value in np.ndenumerate(cm):
-        plt.text(j, i, str(value), ha="center", va="center")
-    plt.xlabel("Predicted")
-    plt.ylabel("Actual")
-    plt.savefig(out_dir / "confusion_matrix.png", bbox_inches="tight")
-    plt.close()
-
-    if importances is not None and feature_names is not None:
-        order = np.argsort(importances)[-15:]
-        plt.figure(figsize=(8, 6))
-        plt.barh(np.array(feature_names)[order], np.array(importances)[order])
-        plt.title("Feature Importance (dữ liệu mô phỏng)")
-        plt.savefig(out_dir / "feature_importance.png", bbox_inches="tight")
-        plt.close()
-
-    try:
-        import shap
-
-        # Placeholder summary file note if shap plots need fitted pipeline later
-        (out_dir / "shap_note.txt").write_text(
-            "SHAP summary plot được tạo khi có TreeExplainer trên mô hình ACTIVE.\nDữ liệu mô phỏng.",
-            encoding="utf-8",
-        )
-    except Exception:
-        pass
-
-
-def train_and_export(artifact_dir: str | os.PathLike | None = None) -> dict:
-    root = Path(artifact_dir or Path(__file__).resolve().parents[1] / "artifacts")
-    root.mkdir(parents=True, exist_ok=True)
-    plots = root / "plots"
-    data_dir = Path(__file__).resolve().parents[1] / "data"
-    data_dir.mkdir(exist_ok=True)
-
-    frame = generate_simulated_dataset()
-    frame.to_csv(data_dir / "simulated_credit_risk.csv", index=False)
-
-    x = frame[NUMERIC + CATEGORICAL]
-    y = frame[TARGET]
-    x_train, x_test, y_train, y_test = train_test_split(
-        x, y, test_size=0.2, stratify=y, random_state=42
-    )
-    pos = max(int((y_train == 1).sum()), 1)
-    neg = max(int((y_train == 0).sum()), 1)
-    pos_weight = neg / pos
-
-    results = {}
-    best_name = None
-    best_score = -1.0
-    best_pipeline = None
-    best_metrics = None
-
-    for name, model in candidate_models(pos_weight).items():
-        pipe = Pipeline(steps=[("preprocess", build_preprocessor()), ("model", model)])
-        pipe.fit(x_train, y_train)
-        proba = pipe.predict_proba(x_test)[:, 1]
-        metrics = evaluate(y_test, proba)
-        results[name] = metrics
-        if metrics["selection_score"] > best_score:
-            best_score = metrics["selection_score"]
-            best_name = name
-            best_pipeline = pipe
-            best_metrics = metrics
-
-    # Stratified K-Fold sanity check on winner
-    cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
-    cv_auc = []
-    for fold_train, fold_valid in cv.split(x_train, y_train):
-        fold_pipe = Pipeline(
-            steps=[("preprocess", build_preprocessor()), ("model", candidate_models(pos_weight)[best_name])]
-        )
-        fold_pipe.fit(x_train.iloc[fold_train], y_train.iloc[fold_train])
-        fold_proba = fold_pipe.predict_proba(x_train.iloc[fold_valid])[:, 1]
-        cv_auc.append(float(roc_auc_score(y_train.iloc[fold_valid], fold_proba)))
-
-    y_proba = best_pipeline.predict_proba(x_test)[:, 1]
-    y_pred = (y_proba >= 0.5).astype(int)
-    try:
-        feature_names = list(best_pipeline.named_steps["preprocess"].get_feature_names_out())
-    except Exception:
-        feature_names = NUMERIC + CATEGORICAL
-    model = best_pipeline.named_steps["model"]
-    importances = getattr(model, "feature_importances_", None)
-    if importances is None and hasattr(model, "coef_"):
-        importances = np.abs(model.coef_[0])
-    save_plots(y_test, y_proba, y_pred, feature_names, importances, plots)
-
-    try:
-        import shap
-
-        sample = x_test.sample(n=min(120, len(x_test)), random_state=42)
-        transformed = best_pipeline.named_steps["preprocess"].transform(sample)
-        if hasattr(model, "predict_proba") and type(model).__name__ == "LogisticRegression":
-            explainer = shap.LinearExplainer(model, transformed)
-        else:
-            explainer = shap.TreeExplainer(model)
-        shap_values = explainer.shap_values(transformed)
-        if isinstance(shap_values, list):
-            shap_values = shap_values[1] if len(shap_values) > 1 else shap_values[0]
-        plt.figure()
-        shap.summary_plot(shap_values, transformed, feature_names=feature_names, show=False)
-        plt.tight_layout()
-        plt.savefig(plots / "shap_summary.png", bbox_inches="tight")
-        plt.close()
-        (plots / "shap_note.txt").write_text(
-            f"SHAP summary plot được tạo thành công cho mô hình ACTIVE ({best_name}).\nDữ liệu mô phỏng.",
-            encoding="utf-8",
-        )
-    except Exception as exc:
-        (plots / "shap_summary_error.txt").write_text(str(exc), encoding="utf-8")
-
-    metadata = {
-        "version": "1.0.0-sim",
-        "algorithm": best_name,
-        "training_dataset": "Dữ liệu mô phỏng nội bộ (synthetic_credit_risk)",
-        "n_rows": int(len(frame)),
-        "class_balance": {
-            "good_repayment_0": int((y == 0).sum()),
-            "default_risk_1": int((y == 1).sum()),
+        "dataset": DATASET,
+        "contract_version": CONTRACT_VERSION,
+        "application_csv": str(application_path),
+        "description_csv": str(description_path),
+        "rows": len(frame), "columns": len(frame.columns),
+        "target_meaning": TARGET_MEANING,
+        "target_counts": {str(key): int(count) for key, count in frame[TARGET].value_counts().sort_index().items()},
+        "target_rates": {str(key): float(count) for key, count in frame[TARGET].value_counts(normalize=True).sort_index().items()},
+        "duplicate_ids": int(frame[ID_COLUMN].duplicated().sum()),
+        "missing_ids": int(frame[ID_COLUMN].isna().sum()),
+        "missing_cells": int(frame.isna().sum().sum()),
+        "columns_with_missing": int(frame.isna().any().sum()),
+        "missing_by_column": {name: int(value) for name, value in frame.isna().sum().items()},
+        "special_categories": special,
+        "days_employed_365243": int(frame["DAYS_EMPLOYED"].eq(365243).sum()),
+        "positive_relative_days": {
+            name: int((frame[name] > 0).sum()) for name in frame if name.startswith("DAYS_")
         },
-        "metrics": best_metrics,
-        "all_models": results,
-        "cv_roc_auc_mean": float(np.mean(cv_auc)),
-        "selection_rule": "0.45*ROC-AUC + 0.35*PR-AUC + 0.20*F1 (không chọn theo Accuracy)",
-        "credit_score_formula": "850 - 550 * default_probability (điểm mô phỏng)",
-        "thresholds": {"LOW_RISK": 0.20, "MEDIUM_RISK": 0.45},
+        "infinite_numeric_values": int(np.isinf(frame.select_dtypes(include="number").to_numpy()).sum()),
+        "nonpositive_amounts": {
+            name: int((frame[name] <= 0).sum()) for name in ("AMT_CREDIT", "AMT_INCOME_TOTAL", "AMT_ANNUITY")
+        },
+        "numeric_features": NUMERIC, "categorical_features": CATEGORICAL,
+        "dictionary": {name: definitions.get(name) for name in frame.columns},
+        "status": "preparation_only_no_model_evaluation_or_export",
     }
-    joblib.dump(best_pipeline, root / "credit_pipeline.joblib")
-    (root / "model_metadata.json").write_text(json.dumps(metadata, indent=2, ensure_ascii=False), encoding="utf-8")
-    return metadata
+
+
+def smoke_pipeline(frame: pd.DataFrame, sample_size: int = 256) -> dict:
+    if sample_size < 10:
+        raise ValueError("sample_size must be at least 10")
+    # Stratified small sample; split BEFORE learning imputers/scaler/categories.
+    if len(frame) > sample_size:
+        sample, _ = train_test_split(frame, train_size=sample_size, stratify=frame[TARGET], random_state=42)
+    else:
+        sample = frame
+    train, valid = train_test_split(sample, test_size=0.25, stratify=sample[TARGET], random_state=42)
+    preprocessor = build_preprocessor()
+    transformed_train = preprocessor.fit_transform(train.loc[:, FEATURES], train[TARGET])
+    transformed_valid = preprocessor.transform(valid.loc[:, FEATURES])
+    for values in (transformed_train, transformed_valid):
+        dense = values.toarray() if hasattr(values, "toarray") else values
+        if not np.isfinite(dense).all():
+            raise ValueError("Pipeline produced non-finite values")
+    return {
+        "sample_rows": len(sample), "fit_rows": len(train), "transform_rows": len(valid),
+        "train_shape": list(transformed_train.shape), "validation_shape": list(transformed_valid.shape),
+        "feature_names": preprocessor.get_feature_names_out().tolist(),
+        "classifier_fitted": False, "model_exported": False,
+    }
+
+
+def train_and_export(*args, **kwargs):
+    raise RuntimeError(
+        "Home Credit training/evaluation/export is disabled in this preparation step. "
+        "Run training/train.py for CSV audit and preprocessing smoke test. "
+        "Keep the existing synthetic serving artifacts until inference contracts are migrated."
+    )
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--application-csv")
+    parser.add_argument("--description-csv")
+    parser.add_argument("--data-dir")
+    parser.add_argument("--sample-size", type=int, default=256)
+    parser.add_argument("--report", type=Path, help="Optional audit JSON (no model artifacts)")
+    args = parser.parse_args()
+    try:
+        frame, dictionary, application_path, description_path = load_home_credit(
+            args.application_csv, args.description_csv, args.data_dir
+        )
+        report = audit_dataset(frame, dictionary, application_path, description_path)
+        report["pipeline_smoke"] = smoke_pipeline(frame, args.sample_size)
+        if args.report:
+            # Do not let a preparation report overwrite the active model or metadata.
+            report_path = args.report.resolve()
+            if "artifacts" in report_path.parts or report_path.suffix.lower() != ".json":
+                raise ValueError("Write audit reports to a .json outside artifacts directories")
+            report_path.parent.mkdir(parents=True, exist_ok=True)
+            report_path.write_text(json.dumps(report, indent=2, ensure_ascii=False), encoding="utf-8")
+        summary = {key: value for key, value in report.items() if key not in {"dictionary", "missing_by_column"}}
+        print(json.dumps(summary, indent=2, ensure_ascii=False))
+    except (ValueError, OSError) as exc:
+        parser.exit(2, f"Home Credit preparation failed: {exc}\n")
 
 
 if __name__ == "__main__":
-    info = train_and_export()
-    print(json.dumps({"best": info["algorithm"], "metrics": info["metrics"]}, ensure_ascii=False, indent=2))
+    main()
