@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
 from app.core.exceptions import NotFoundError
-from app.core.roles import ADMIN, CREDIT_OFFICER, RISK_VIEWER
+from app.core.roles import ADMIN, OFFICER
 from app.database import get_db
 from app.dependencies import require_roles
 from app.models.customer import Customer
@@ -18,7 +18,7 @@ router = APIRouter(prefix="/api/customers", tags=["customers"])
 def create_customer(
     payload: CustomerCreate,
     db: Session = Depends(get_db),
-    current: User = Depends(require_roles(ADMIN, CREDIT_OFFICER)),
+    current: User = Depends(require_roles(ADMIN, OFFICER)),
 ):
     customer = Customer(**payload.model_dump(), is_simulated=True, created_by=current.id)
     db.add(customer)
@@ -35,7 +35,7 @@ def list_customers(
     page: int = Query(1, ge=1),
     page_size: int = Query(10, ge=1, le=100),
     db: Session = Depends(get_db),
-    _: User = Depends(require_roles(ADMIN, CREDIT_OFFICER, RISK_VIEWER)),
+    _: User = Depends(require_roles(ADMIN, OFFICER)),
 ):
     query = db.query(Customer)
     if q:
@@ -52,7 +52,7 @@ def list_customers(
 def get_customer(
     customer_id: int,
     db: Session = Depends(get_db),
-    _: User = Depends(require_roles(ADMIN, CREDIT_OFFICER, RISK_VIEWER)),
+    _: User = Depends(require_roles(ADMIN, OFFICER)),
 ):
     customer = db.query(Customer).filter(Customer.id == customer_id).first()
     if customer is None:
@@ -65,7 +65,7 @@ def update_customer(
     customer_id: int,
     payload: CustomerUpdate,
     db: Session = Depends(get_db),
-    current: User = Depends(require_roles(ADMIN, CREDIT_OFFICER)),
+    current: User = Depends(require_roles(ADMIN, OFFICER)),
 ):
     customer = db.query(Customer).filter(Customer.id == customer_id).first()
     if customer is None:

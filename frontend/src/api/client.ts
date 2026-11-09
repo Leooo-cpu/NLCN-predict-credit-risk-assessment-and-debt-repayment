@@ -33,6 +33,6 @@ export function errorMessage(error: unknown): string {
   const err = error as { response?: { data?: { detail?: string | unknown } }; message?: string };
   const detail = err.response?.data?.detail;
   if (typeof detail === "string") return detail;
-  if (Array.isArray(detail)) return "Dữ liệu không hợp lệ";
+  if (Array.isArray(detail)) return detail.map(item => `${item.loc?.join(".") || "Đầu vào"}: ${item.msg || "Không hợp lệ"}`).join("; ");
   return err.message || "Đã xảy ra lỗi";
 }

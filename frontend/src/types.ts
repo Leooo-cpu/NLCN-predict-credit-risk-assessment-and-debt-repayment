@@ -1,10 +1,10 @@
-export type Role = "ADMIN" | "CREDIT_OFFICER" | "RISK_VIEWER";
+export type Role = "ADMIN" | "OFFICER";
 
 export interface User {
   id: number;
   email: string;
   full_name: string;
-  role: Role;
+  role: string; // Historical inactive accounts can retain a retired role.
   is_active: boolean;
   created_at: string;
   updated_at: string;
@@ -124,4 +124,36 @@ export interface ModelInfo {
   status: string;
   created_at: string;
   credit_score_formula?: string;
+}
+
+export interface ServingModel {
+  version: string;
+  algorithm: string;
+  training_dataset: string;
+  selection_policy: string;
+  classification_threshold: number;
+  credit_score_formula: string;
+  cv_results: { models: Record<string, { summary: { ap_mean: number; ap_std: number; roc_auc_mean: number; roc_auc_std: number } }> };
+  test_metrics: Record<string, unknown>;
+  risk_bands: { status: string };
+}
+
+export interface HomeCreditContract {
+  features: Record<string, { kind: string; nullable: boolean; label: string; unit: string; choices?: string[] }>;
+  amount_unit: string;
+}
+
+export interface HomeCreditPrediction {
+  payment_difficulty_probability: number;
+  other_outcome_probability: number;
+  predicted_payment_difficulty: boolean;
+  classification_threshold: number;
+  model_version: string;
+  algorithm: string;
+  data_source: string;
+  credit_score: number;
+  risk_level: string;
+  imputed_features: string[];
+  outcome_definition: string;
+  disclaimer: string;
 }

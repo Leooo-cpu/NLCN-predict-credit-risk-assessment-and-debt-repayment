@@ -7,7 +7,7 @@ numpy==2.2.1
 scikit-learn==1.6.0
 xgboost==2.1.4
 joblib==1.4.2
-shap==0.46.0
-matplotlib==3.10.0
+# Active Home Credit API does not generate SHAP or plots. Historical results stay unchanged.
 pytest==8.3.4
 python-multipart==0.0.20
+httpx==0.28.1

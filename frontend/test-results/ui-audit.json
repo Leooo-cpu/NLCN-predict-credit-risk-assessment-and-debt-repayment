@@ -1,0 +1,578 @@
+{
+  "environment": "production preview; mocked API; Chromium",
+  "checks": [
+    "responsive / 320",
+    "responsive / 375",
+    "responsive / 768",
+    "responsive / 1024",
+    "responsive / 1440",
+    "responsive /customers 320",
+    "responsive /customers 375",
+    "responsive /customers 768",
+    "responsive /customers 1024",
+    "responsive /customers 1440",
+    "responsive /loans 320",
+    "responsive /loans 375",
+    "responsive /loans 768",
+    "responsive /loans 1024",
+    "responsive /loans 1440",
+    "responsive /customers/new 320",
+    "responsive /customers/new 375",
+    "responsive /customers/new 768",
+    "responsive /customers/new 1024",
+    "responsive /customers/new 1440",
+    "responsive /customers/1 320",
+    "responsive /customers/1 375",
+    "responsive /customers/1 768",
+    "responsive /customers/1 1024",
+    "responsive /customers/1 1440",
+    "responsive /loans/1 320",
+    "responsive /loans/1 375",
+    "responsive /loans/1 768",
+    "responsive /loans/1 1024",
+    "responsive /loans/1 1440",
+    "responsive /risk-assessment 320",
+    "responsive /risk-assessment 375",
+    "responsive /risk-assessment 768",
+    "responsive /risk-assessment 1024",
+    "responsive /risk-assessment 1440",
+    "responsive /risk-assessment/1 320",
+    "responsive /risk-assessment/1 375",
+    "responsive /risk-assessment/1 768",
+    "responsive /risk-assessment/1 1024",
+    "responsive /risk-assessment/1 1440",
+    "responsive /predictions 320",
+    "responsive /predictions 375",
+    "responsive /predictions 768",
+    "responsive /predictions 1024",
+    "responsive /predictions 1440",
+    "responsive /models 320",
+    "responsive /models 375",
+    "responsive /models 768",
+    "responsive /models 1024",
+    "responsive /models 1440",
+    "responsive /users 320",
+    "responsive /users 375",
+    "responsive /users 768",
+    "responsive /users 1024",
+    "responsive /users 1440",
+    "drawer opens",
+    "drawer initial focus",
+    "drawer Shift+Tab trap",
+    "drawer Tab trap",
+    "Escape restores focus and scroll",
+    "drawer closes on navigation",
+    "navigation focuses main",
+    "pagination next",
+    "create inside assessment has one h1",
+    "native validation focuses first invalid field",
+    "prediction selection focuses result",
+    "latest search wins reversed responses",
+    "assessment inputs locked",
+    "double score creates exactly one save and one score",
+    "score payload unchanged",
+    "save-only never scores",
+    "user create disabled while pending",
+    "user double submit creates one OFFICER",
+    "toggle protected from repeat click",
+    "toast expiry does not refetch models",
+    "failed model read does not loop",
+    "read retry succeeds",
+    "empty /customers",
+    "empty /predictions",
+    "empty /users",
+    "empty /models",
+    "empty dataset differs from no search matches",
+    "initial loading on slow network",
+    "failed write retains input",
+    "axe /",
+    "axe /customers",
+    "axe /loans",
+    "axe /customers/new",
+    "axe /customers/1",
+    "axe /loans/1",
+    "axe /risk-assessment",
+    "axe /risk-assessment/1",
+    "axe /predictions",
+    "axe /models",
+    "axe /users",
+    "axe open mobile drawer",
+    "OFFICER cannot access users",
+    "retired role cannot access writer route",
+    "logout clears token",
+    "login responsive 320",
+    "login responsive 375",
+    "login responsive 768",
+    "login responsive 1024",
+    "login responsive 1440",
+    "axe login",
+    "register form accessible",
+    "mock login returns dashboard",
+    "success toast has opaque surface",
+    "axe success toast",
+    "no uncaught JavaScript errors"
+  ],
+  "responsive": [
+    {
+      "path": "/",
+      "width": 320,
+      "scroll": 305,
+      "h1": 1,
+      "missing": 0
+    },
+    {
+      "path": "/",
+      "width": 375,
+      "scroll": 360,
+      "h1": 1,
+      "missing": 0
+    },
+    {
+      "path": "/",
+      "width": 768,
+      "scroll": 753,
+      "h1": 1,
+      "missing": 0
+    },
+    {
+      "path": "/",
+      "width": 1024,
+      "scroll": 1009,
+      "h1": 1,
+      "missing": 0
+    },
+    {
+      "path": "/",
+      "width": 1440,
+      "scroll": 1440,
+      "h1": 1,
+      "missing": 0
+    },
+    {
+      "path": "/customers",
+      "width": 320,
+      "scroll": 305,
+      "h1": 1,
+      "missing": 0
+    },
+    {
+      "path": "/customers",
+      "width": 375,
+      "scroll": 360,
+      "h1": 1,
+      "missing": 0
+    },
+    {
+      "path": "/customers",
+      "width": 768,
+      "scroll": 768,
+      "h1": 1,
+      "missing": 0
+    },
+    {
+      "path": "/customers",
+      "width": 1024,
+      "scroll": 1024,
+      "h1": 1,
+      "missing": 0
+    },
+    {
+      "path": "/customers",
+      "width": 1440,
+      "scroll": 1440,
+      "h1": 1,
+      "missing": 0
+    },
+    {
+      "path": "/loans",
+      "width": 320,
+      "scroll": 305,
+      "h1": 1,
+      "missing": 0
+    },
+    {
+      "path": "/loans",
+      "width": 375,
+      "scroll": 360,
+      "h1": 1,
+      "missing": 0
+    },
+    {
+      "path": "/loans",
+      "width": 768,
+      "scroll": 768,
+      "h1": 1,
+      "missing": 0
+    },
+    {
+      "path": "/loans",
+      "width": 1024,
+      "scroll": 1024,
+      "h1": 1,
+      "missing": 0
+    },
+    {
+      "path": "/loans",
+      "width": 1440,
+      "scroll": 1440,
+      "h1": 1,
+      "missing": 0
+    },
+    {
+      "path": "/customers/new",
+      "width": 320,
+      "scroll": 305,
+      "h1": 1,
+      "missing": 0
+    },
+    {
+      "path": "/customers/new",
+      "width": 375,
+      "scroll": 360,
+      "h1": 1,
+      "missing": 0
+    },
+    {
+      "path": "/customers/new",
+      "width": 768,
+      "scroll": 753,
+      "h1": 1,
+      "missing": 0
+    },
+    {
+      "path": "/customers/new",
+      "width": 1024,
+      "scroll": 1009,
+      "h1": 1,
+      "missing": 0
+    },
+    {
+      "path": "/customers/new",
+      "width": 1440,
+      "scroll": 1425,
+      "h1": 1,
+      "missing": 0
+    },
+    {
+      "path": "/customers/1",
+      "width": 320,
+      "scroll": 305,
+      "h1": 1,
+      "missing": 0
+    },
+    {
+      "path": "/customers/1",
+      "width": 375,
+      "scroll": 360,
+      "h1": 1,
+      "missing": 0
+    },
+    {
+      "path": "/customers/1",
+      "width": 768,
+      "scroll": 753,
+      "h1": 1,
+      "missing": 0
+    },
+    {
+      "path": "/customers/1",
+      "width": 1024,
+      "scroll": 1024,
+      "h1": 1,
+      "missing": 0
+    },
+    {
+      "path": "/customers/1",
+      "width": 1440,
+      "scroll": 1440,
+      "h1": 1,
+      "missing": 0
+    },
+    {
+      "path": "/loans/1",
+      "width": 320,
+      "scroll": 305,
+      "h1": 1,
+      "missing": 0
+    },
+    {
+      "path": "/loans/1",
+      "width": 375,
+      "scroll": 360,
+      "h1": 1,
+      "missing": 0
+    },
+    {
+      "path": "/loans/1",
+      "width": 768,
+      "scroll": 753,
+      "h1": 1,
+      "missing": 0
+    },
+    {
+      "path": "/loans/1",
+      "width": 1024,
+      "scroll": 1009,
+      "h1": 1,
+      "missing": 0
+    },
+    {
+      "path": "/loans/1",
+      "width": 1440,
+      "scroll": 1425,
+      "h1": 1,
+      "missing": 0
+    },
+    {
+      "path": "/risk-assessment",
+      "width": 320,
+      "scroll": 320,
+      "h1": 1,
+      "missing": 0
+    },
+    {
+      "path": "/risk-assessment",
+      "width": 375,
+      "scroll": 375,
+      "h1": 1,
+      "missing": 0
+    },
+    {
+      "path": "/risk-assessment",
+      "width": 768,
+      "scroll": 768,
+      "h1": 1,
+      "missing": 0
+    },
+    {
+      "path": "/risk-assessment",
+      "width": 1024,
+      "scroll": 1024,
+      "h1": 1,
+      "missing": 0
+    },
+    {
+      "path": "/risk-assessment",
+      "width": 1440,
+      "scroll": 1440,
+      "h1": 1,
+      "missing": 0
+    },
+    {
+      "path": "/risk-assessment/1",
+      "width": 320,
+      "scroll": 305,
+      "h1": 1,
+      "missing": 0
+    },
+    {
+      "path": "/risk-assessment/1",
+      "width": 375,
+      "scroll": 360,
+      "h1": 1,
+      "missing": 0
+    },
+    {
+      "path": "/risk-assessment/1",
+      "width": 768,
+      "scroll": 753,
+      "h1": 1,
+      "missing": 0
+    },
+    {
+      "path": "/risk-assessment/1",
+      "width": 1024,
+      "scroll": 1009,
+      "h1": 1,
+      "missing": 0
+    },
+    {
+      "path": "/risk-assessment/1",
+      "width": 1440,
+      "scroll": 1425,
+      "h1": 1,
+      "missing": 0
+    },
+    {
+      "path": "/predictions",
+      "width": 320,
+      "scroll": 305,
+      "h1": 1,
+      "missing": 0
+    },
+    {
+      "path": "/predictions",
+      "width": 375,
+      "scroll": 375,
+      "h1": 1,
+      "missing": 0
+    },
+    {
+      "path": "/predictions",
+      "width": 768,
+      "scroll": 768,
+      "h1": 1,
+      "missing": 0
+    },
+    {
+      "path": "/predictions",
+      "width": 1024,
+      "scroll": 1024,
+      "h1": 1,
+      "missing": 0
+    },
+    {
+      "path": "/predictions",
+      "width": 1440,
+      "scroll": 1440,
+      "h1": 1,
+      "missing": 0
+    },
+    {
+      "path": "/models",
+      "width": 320,
+      "scroll": 305,
+      "h1": 1,
+      "missing": 0
+    },
+    {
+      "path": "/models",
+      "width": 375,
+      "scroll": 360,
+      "h1": 1,
+      "missing": 0
+    },
+    {
+      "path": "/models",
+      "width": 768,
+      "scroll": 753,
+      "h1": 1,
+      "missing": 0
+    },
+    {
+      "path": "/models",
+      "width": 1024,
+      "scroll": 1009,
+      "h1": 1,
+      "missing": 0
+    },
+    {
+      "path": "/models",
+      "width": 1440,
+      "scroll": 1425,
+      "h1": 1,
+      "missing": 0
+    },
+    {
+      "path": "/users",
+      "width": 320,
+      "scroll": 305,
+      "h1": 1,
+      "missing": 0
+    },
+    {
+      "path": "/users",
+      "width": 375,
+      "scroll": 360,
+      "h1": 1,
+      "missing": 0
+    },
+    {
+      "path": "/users",
+      "width": 768,
+      "scroll": 753,
+      "h1": 1,
+      "missing": 0
+    },
+    {
+      "path": "/users",
+      "width": 1024,
+      "scroll": 1009,
+      "h1": 1,
+      "missing": 0
+    },
+    {
+      "path": "/users",
+      "width": 1440,
+      "scroll": 1440,
+      "h1": 1,
+      "missing": 0
+    }
+  ],
+  "accessibility": [
+    {
+      "path": "/",
+      "violations": []
+    },
+    {
+      "path": "/customers",
+      "violations": []
+    },
+    {
+      "path": "/loans",
+      "violations": []
+    },
+    {
+      "path": "/customers/new",
+      "violations": []
+    },
+    {
+      "path": "/customers/1",
+      "violations": []
+    },
+    {
+      "path": "/loans/1",
+      "violations": []
+    },
+    {
+      "path": "/risk-assessment",
+      "violations": []
+    },
+    {
+      "path": "/risk-assessment/1",
+      "violations": []
+    },
+    {
+      "path": "/predictions",
+      "violations": []
+    },
+    {
+      "path": "/models",
+      "violations": []
+    },
+    {
+      "path": "/users",
+      "violations": []
+    }
+  ],
+  "loginAxe": [],
+  "drawerViolations": [],
+  "errors": [],
+  "scoreWrites": [
+    {
+      "path": "/api/credit-cases/1/inputs",
+      "method": "PUT",
+      "body": {
+        "inputs": {
+          "amount_unit": "HOME_CREDIT_SOURCE",
+          "AMT_CREDIT": 450000,
+          "NAME_CONTRACT_TYPE": "Cash loans",
+          "OCCUPATION_TYPE": "Accountants",
+          "DAYS_BIRTH": -12000,
+          "DAYS_EMPLOYED": -2500,
+          "AMT_ANNUITY": 25000
+        },
+        "expected_revision": 1
+      },
+      "query": ""
+    },
+    {
+      "path": "/api/credit-cases/1/score",
+      "method": "POST",
+      "body": {
+        "expected_revision": 1
+      },
+      "query": ""
+    }
+  ]
+}

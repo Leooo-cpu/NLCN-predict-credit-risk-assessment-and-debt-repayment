@@ -1,100 +1,254 @@
-import { FormEvent, useEffect, useState } from "react";
-import { api, errorMessage } from "../api/client";
+import { useUsersPage } from "../hooks/useUsersPage";
 import { Loading } from "../components/Loading";
 import { Pager } from "../components/Pager";
-import { useToast } from "../components/Toast";
-import type { Paginated, Role, User } from "../types";
-
+import {
+  DataTable,
+  EmptyState,
+  ErrorState,
+  FormField,
+  PageHeader,
+  SearchInput,
+} from "../components/UI";
+import type { User } from "../types";
 export function UsersPage() {
-  const [items, setItems] = useState<User[]>([]);
-  const [total, setTotal] = useState(0);
-  const [page, setPage] = useState(1);
-  const [q, setQ] = useState("");
-  const [loading, setLoading] = useState(true);
-  const [form, setForm] = useState({ email: "", full_name: "", password: "", role: "CREDIT_OFFICER" as Role });
-  const toast = useToast();
-
-  async function load(p = page) {
-    setLoading(true);
-    try {
-      const res = await api.get<Paginated<User>>("/api/users", { params: { page: p, page_size: 8, q: q || undefined } });
-      setItems(res.data.items);
-      setTotal(res.data.total);
-      setPage(p);
-    } catch (err) {
-      toast.error(errorMessage(err));
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  useEffect(() => {
-    load(1);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  async function onSubmit(e: FormEvent) {
-    e.preventDefault();
-    try {
-      await api.post("/api/users", form);
-      toast.success("Đã tạo người dùng");
-      setForm({ email: "", full_name: "", password: "", role: "CREDIT_OFFICER" });
-      load(1);
-    } catch (err) {
-      toast.error(errorMessage(err));
-    }
-  }
-
-  async function toggle(user: User) {
-    try {
-      await api.put(`/api/users/${user.id}`, { is_active: !user.is_active });
-      load(page);
-    } catch (err) {
-      toast.error(errorMessage(err));
-    }
-  }
-
+  const {
+    validation,
+    q,
+    setQ,
+    applied,
+    form,
+    setForm,
+    creating,
+    pending,
+    createError,
+    submitted,
+    data,
+    loading,
+    error,
+    load,
+    onSubmit,
+    toggle,
+  } = useUsersPage();
   return (
-    <div className="grid grid-cols-[1.4fr_1fr] gap-4">
-      <div className="card">
-        <div className="mb-3 flex gap-2">
-          <input className="input" placeholder="Tìm email / họ tên" value={q} onChange={(e) => setQ(e.target.value)} />
-          <button className="btn-primary" onClick={() => load(1)}>Tìm</button>
-        </div>
-        {loading ? <Loading /> : (
-          <>
-            <table className="table">
-              <thead>
-                <tr><th>Họ tên</th><th>Email</th><th>Vai trò</th><th>Trạng thái</th><th></th></tr>
-              </thead>
-              <tbody>
-                {items.map((u) => (
-                  <tr key={u.id}>
-                    <td>{u.full_name}</td>
-                    <td>{u.email}</td>
-                    <td>{u.role}</td>
-                    <td>{u.is_active ? "Hoạt động" : "Khóa"}</td>
-                    <td><button className="text-brand-600" onClick={() => toggle(u)}>{u.is_active ? "Khóa" : "Mở"}</button></td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            <Pager page={page} pageSize={8} total={total} onPage={load} />
-          </>
-        )}
+    <div className="space-y-6">
+      <PageHeader
+        title="Quản lý người dùng"
+        description="Tra cứu tài khoản và quản lý quyền hoạt động của nhân viên."
+      />
+      <div className="grid min-w-0 grid-cols-1 items-start gap-6 xl:grid-cols-[minmax(0,1.7fr)_minmax(0,1fr)]">
+        <section className="card space-y-5" aria-label="Danh sách người dùng">
+          <form
+            className="toolbar"
+            onSubmit={(event) => {
+              event.preventDefault();
+              if (loading && submitted.current === q) return;
+              submitted.current = q;
+              void load(1, q);
+            }}
+          >
+            <SearchInput
+              label="Email hoặc họ tên"
+              placeholder="Tìm người dùng"
+              value={q}
+              onChange={(event) => setQ(event.target.value)}
+            />
+            <button className="btn-secondary">Tìm kiếm</button>
+          </form>
+          {loading ? (
+            <Loading />
+          ) : error ? (
+            <ErrorState message={error} retry={() => load(applied.page)} />
+          ) : (
+            data && (
+              <>
+                {!data.items.length ? (
+                  <EmptyState
+                    title={
+                      applied.q
+                        ? "Không tìm thấy người dùng"
+                        : "Chưa có người dùng"
+                    }
+                    description={
+                      applied.q
+                        ? "Thử email hoặc họ tên khác."
+                        : "Các tài khoản sẽ xuất hiện tại đây."
+                    }
+                  />
+                ) : (
+                  <UsersTable
+                    items={data.items}
+                    pending={pending}
+                    toggle={toggle}
+                  />
+                )}
+                <Pager
+                  page={applied.page}
+                  pageSize={8}
+                  total={data.total}
+                  onPage={load}
+                />
+              </>
+            )
+          )}
+        </section>
+        <form
+          className="card space-y-5"
+          onSubmit={(event) => {
+            void onSubmit(event);
+          }}
+          aria-busy={creating}
+          onInvalid={validation.onInvalid}
+        >
+          <div>
+            <h2>Tạo tài khoản nhân viên</h2>
+            <p className="mt-2 field-hint">
+              Tài khoản mới có vai trò OFFICER. Không thể tạo thêm Admin.
+            </p>
+          </div>
+          <fieldset className="min-w-0 space-y-4" disabled={creating}>
+            <legend className="sr-only">Thông tin tài khoản mới</legend>
+            <FormField
+              label="Họ tên"
+              htmlFor="user-name"
+              error={validation.errors["user-name"]}
+            >
+              <input
+                id="user-name"
+                {...validation.attributes("user-name")}
+                className="input"
+                autoComplete="name"
+                required
+                value={form.full_name}
+                onChange={(event) => {
+                  validation.clear("user-name");
+                  setForm({ ...form, full_name: event.target.value });
+                }}
+              />
+            </FormField>
+            <FormField
+              label="Email"
+              htmlFor="user-email"
+              error={validation.errors["user-email"]}
+            >
+              <input
+                id="user-email"
+                {...validation.attributes("user-email")}
+                className="input"
+                autoComplete="email"
+                type="email"
+                required
+                value={form.email}
+                onChange={(event) => {
+                  validation.clear("user-email");
+                  setForm({ ...form, email: event.target.value });
+                }}
+              />
+            </FormField>
+            <FormField
+              label="Mật khẩu"
+              htmlFor="user-password"
+              error={validation.errors["user-password"]}
+            >
+              <input
+                id="user-password"
+                {...validation.attributes("user-password")}
+                className="input"
+                autoComplete="new-password"
+                type="password"
+                required
+                value={form.password}
+                onChange={(event) => {
+                  validation.clear("user-password");
+                  setForm({ ...form, password: event.target.value });
+                }}
+              />
+            </FormField>
+          </fieldset>
+          {createError && <ErrorState message={createError} />}
+          <button className="btn-primary w-full" disabled={creating}>
+            {creating ? "Đang tạo tài khoản…" : "Tạo tài khoản"}
+          </button>
+        </form>
       </div>
-      <form className="card space-y-3" onSubmit={onSubmit}>
-        <h3 className="font-medium">Tạo người dùng</h3>
-        <input className="input" placeholder="Họ tên" value={form.full_name} onChange={(e) => setForm({ ...form, full_name: e.target.value })} required />
-        <input className="input" type="email" placeholder="Email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} required />
-        <input className="input" type="password" placeholder="Mật khẩu" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} required />
-        <select className="input" value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value as Role })}>
-          <option value="ADMIN">ADMIN</option>
-          <option value="CREDIT_OFFICER">CREDIT_OFFICER</option>
-          <option value="RISK_VIEWER">RISK_VIEWER</option>
-        </select>
-        <button className="btn-primary w-full">Tạo</button>
-      </form>
     </div>
+  );
+}
+
+function UsersTable({
+  items,
+  pending,
+  toggle,
+}: {
+  items: User[];
+  pending: number[];
+  toggle: (user: User) => Promise<void>;
+}) {
+  return (
+    <DataTable label="Tài khoản người dùng">
+      <table className="table">
+        <caption>Danh sách tài khoản người dùng</caption>
+        <thead>
+          <tr>
+            <th scope="col">Họ tên / Email</th>
+            <th scope="col">Vai trò</th>
+            <th scope="col">Trạng thái</th>
+            <th scope="col">Thao tác</th>
+          </tr>
+        </thead>
+        <tbody>
+          {items.map((user) => (
+            <tr key={user.id}>
+              <td className="min-w-48">
+                <p className="font-medium">{user.full_name}</p>
+                <p className="mt-1 break-all text-sm text-muted">
+                  {user.email}
+                </p>
+              </td>
+              <td>
+                <span className="badge">{user.role}</span>
+              </td>
+              <td>
+                <span
+                  className={
+                    user.is_active ? "text-emerald-800" : "text-slate-600"
+                  }
+                >
+                  {user.is_active ? "Hoạt động" : "Khóa"}
+                </span>
+              </td>
+              <td>
+                {user.role === "ADMIN" ? (
+                  <span className="text-xs text-muted">Admin được bảo vệ</span>
+                ) : user.role === "OFFICER" ? (
+                  <button
+                    type="button"
+                    disabled={pending.includes(user.id)}
+                    className={
+                      user.is_active
+                        ? "btn-danger whitespace-nowrap"
+                        : "btn-secondary whitespace-nowrap"
+                    }
+                    aria-label={`${user.is_active ? "Khóa" : "Mở khóa"} tài khoản ${user.full_name}`}
+                    onClick={() => {
+                      void toggle(user);
+                    }}
+                  >
+                    {pending.includes(user.id)
+                      ? "Đang xử lý…"
+                      : user.is_active
+                        ? "Khóa"
+                        : "Mở khóa"}
+                  </button>
+                ) : (
+                  <span className="text-xs text-muted">
+                    Vai trò đã ngừng sử dụng
+                  </span>
+                )}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </DataTable>
   );
 }

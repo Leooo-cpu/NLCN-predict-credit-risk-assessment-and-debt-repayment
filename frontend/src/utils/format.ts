@@ -8,6 +8,7 @@ export function pct(value?: number | string | null) {
 }
 
 export function riskLabel(level?: string | null) {
+  if (level === "NOT_VALIDATED") return "Chưa xác nhận ngưỡng phân nhóm";
   if (level === "LOW_RISK") return "Rủi ro thấp";
   if (level === "MEDIUM_RISK") return "Rủi ro trung bình";
   if (level === "HIGH_RISK") return "Rủi ro cao";

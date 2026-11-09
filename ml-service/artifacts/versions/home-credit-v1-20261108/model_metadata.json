@@ -1,0 +1,404 @@
+{
+  "version": "home-credit-v1-20261108",
+  "algorithm": "XGBoost",
+  "training_dataset": "Home Credit Default Risk / application_train.csv",
+  "contract_version": "home-credit-application-v1",
+  "features": [
+    "AMT_CREDIT",
+    "AMT_ANNUITY",
+    "DAYS_BIRTH",
+    "DAYS_EMPLOYED",
+    "NAME_CONTRACT_TYPE",
+    "OCCUPATION_TYPE"
+  ],
+  "target_meaning": {
+    "1": "Client with payment difficulties: late payment more than X days on at least one of the first Y installments (X/Y not disclosed).",
+    "0": "All other cases; not a guarantee of future repayment."
+  },
+  "positive_class": 1,
+  "n_rows": 307511,
+  "training_rows": 246008,
+  "test_rows": 61503,
+  "split": {
+    "test_size": 0.2,
+    "stratify": "TARGET",
+    "random_state": 42
+  },
+  "cv_results": {
+    "dataset": "Home Credit Default Risk / application_train.csv",
+    "contract_version": "home-credit-application-v1",
+    "profile": "standard",
+    "training_rows": 246008,
+    "training_ids_sha256": "311fdecdd2781c3301ec9043d498bdc0d008612f9a4bb8a2e604d1c54aabe3b6",
+    "cv": {
+      "n_splits": 5,
+      "shuffle": true,
+      "random_state": 42,
+      "std_ddof": 0
+    },
+    "models": {
+      "LogisticRegression": {
+        "folds": [
+          {
+            "fold": 1,
+            "fit_rows": 196806,
+            "validation_rows": 49202,
+            "fit_ids_sha256": "ad52aba5708a7b763fc53ff8d04dd1a3bfb37dbe59c00e99724f8755e8bfb9fb",
+            "validation_ids_sha256": "19dc071a78b27c7621a8aa0211778ad5ecbe2285fdd7c68fdd51906049df562a",
+            "fit_class_counts": {
+              "0": 180918,
+              "1": 15888
+            },
+            "scale_pos_weight": null,
+            "ap": 0.1288312193763274,
+            "roc_auc": 0.6333685260676158
+          },
+          {
+            "fold": 2,
+            "fit_rows": 196806,
+            "validation_rows": 49202,
+            "fit_ids_sha256": "5b5e69b3acc868626be119b049447a1c88398f7cbd4bbeb89888f814291f309b",
+            "validation_ids_sha256": "79e0e87c23beaa575e0034f44463da0fc65b844bccb5aaa109fc2d50353c0d75",
+            "fit_class_counts": {
+              "0": 180918,
+              "1": 15888
+            },
+            "scale_pos_weight": null,
+            "ap": 0.12222724781168243,
+            "roc_auc": 0.6283071596243347
+          },
+          {
+            "fold": 3,
+            "fit_rows": 196806,
+            "validation_rows": 49202,
+            "fit_ids_sha256": "bcf077414d7d005dff8dce280c91f75f30509fbc4ffdcb725ab5df174b29218a",
+            "validation_ids_sha256": "89eee9fce0975132fa434a7d6b574799b38ffac34e249cbea66460b2014f02ba",
+            "fit_class_counts": {
+              "0": 180918,
+              "1": 15888
+            },
+            "scale_pos_weight": null,
+            "ap": 0.12802087095195874,
+            "roc_auc": 0.6341145675042564
+          },
+          {
+            "fold": 4,
+            "fit_rows": 196807,
+            "validation_rows": 49201,
+            "fit_ids_sha256": "482115d292e61161bc686ae1483797f685faf8e94af45a18ae4a26bc5143cbc6",
+            "validation_ids_sha256": "e8dd31e08c5eb068f2a9dddcd41307bac02d99d019de4d78e45235c1e4b56bad",
+            "fit_class_counts": {
+              "0": 180919,
+              "1": 15888
+            },
+            "scale_pos_weight": null,
+            "ap": 0.12454065895198874,
+            "roc_auc": 0.6269775636780196
+          },
+          {
+            "fold": 5,
+            "fit_rows": 196807,
+            "validation_rows": 49201,
+            "fit_ids_sha256": "23bde3599d304e5ef9e9d22f67771af074508e4540fae4a0b1083a895d0b03ce",
+            "validation_ids_sha256": "4e361f0d97cc2a7539fac4e3ed99a68da59099e510654c0e2967c5d8f8e468bb",
+            "fit_class_counts": {
+              "0": 180919,
+              "1": 15888
+            },
+            "scale_pos_weight": null,
+            "ap": 0.12306317278648082,
+            "roc_auc": 0.6272904449967344
+          }
+        ],
+        "summary": {
+          "ap_mean": 0.12533663397568762,
+          "ap_std": 0.0026415048590239187,
+          "roc_auc_mean": 0.6300116523741922,
+          "roc_auc_std": 0.0030860483761535485
+        },
+        "selection_inputs": {
+          "ap_mean": 0.12533663397568762,
+          "ap_std": 0.0026415048590239187,
+          "roc_auc_mean": 0.6300116523741922,
+          "roc_auc_std": 0.0030860483761535485
+        }
+      },
+      "RandomForest": {
+        "folds": [
+          {
+            "fold": 1,
+            "fit_rows": 196806,
+            "validation_rows": 49202,
+            "fit_ids_sha256": "ad52aba5708a7b763fc53ff8d04dd1a3bfb37dbe59c00e99724f8755e8bfb9fb",
+            "validation_ids_sha256": "19dc071a78b27c7621a8aa0211778ad5ecbe2285fdd7c68fdd51906049df562a",
+            "fit_class_counts": {
+              "0": 180918,
+              "1": 15888
+            },
+            "scale_pos_weight": null,
+            "ap": 0.13526881259807427,
+            "roc_auc": 0.6471517987174871
+          },
+          {
+            "fold": 2,
+            "fit_rows": 196806,
+            "validation_rows": 49202,
+            "fit_ids_sha256": "5b5e69b3acc868626be119b049447a1c88398f7cbd4bbeb89888f814291f309b",
+            "validation_ids_sha256": "79e0e87c23beaa575e0034f44463da0fc65b844bccb5aaa109fc2d50353c0d75",
+            "fit_class_counts": {
+              "0": 180918,
+              "1": 15888
+            },
+            "scale_pos_weight": null,
+            "ap": 0.13180464175017909,
+            "roc_auc": 0.6376596266725802
+          },
+          {
+            "fold": 3,
+            "fit_rows": 196806,
+            "validation_rows": 49202,
+            "fit_ids_sha256": "bcf077414d7d005dff8dce280c91f75f30509fbc4ffdcb725ab5df174b29218a",
+            "validation_ids_sha256": "89eee9fce0975132fa434a7d6b574799b38ffac34e249cbea66460b2014f02ba",
+            "fit_class_counts": {
+              "0": 180918,
+              "1": 15888
+            },
+            "scale_pos_weight": null,
+            "ap": 0.13491774630090295,
+            "roc_auc": 0.6411290096338753
+          },
+          {
+            "fold": 4,
+            "fit_rows": 196807,
+            "validation_rows": 49201,
+            "fit_ids_sha256": "482115d292e61161bc686ae1483797f685faf8e94af45a18ae4a26bc5143cbc6",
+            "validation_ids_sha256": "e8dd31e08c5eb068f2a9dddcd41307bac02d99d019de4d78e45235c1e4b56bad",
+            "fit_class_counts": {
+              "0": 180919,
+              "1": 15888
+            },
+            "scale_pos_weight": null,
+            "ap": 0.13552243189182223,
+            "roc_auc": 0.6396283998157569
+          },
+          {
+            "fold": 5,
+            "fit_rows": 196807,
+            "validation_rows": 49201,
+            "fit_ids_sha256": "23bde3599d304e5ef9e9d22f67771af074508e4540fae4a0b1083a895d0b03ce",
+            "validation_ids_sha256": "4e361f0d97cc2a7539fac4e3ed99a68da59099e510654c0e2967c5d8f8e468bb",
+            "fit_class_counts": {
+              "0": 180919,
+              "1": 15888
+            },
+            "scale_pos_weight": null,
+            "ap": 0.13095594273479436,
+            "roc_auc": 0.6375269727866005
+          }
+        ],
+        "summary": {
+          "ap_mean": 0.13369391505515457,
+          "ap_std": 0.0019176748973010684,
+          "roc_auc_mean": 0.64061916152526,
+          "roc_auc_std": 0.0035280980792450497
+        },
+        "selection_inputs": {
+          "ap_mean": 0.13369391505515457,
+          "ap_std": 0.0019176748973010684,
+          "roc_auc_mean": 0.64061916152526,
+          "roc_auc_std": 0.0035280980792450497
+        }
+      },
+      "XGBoost": {
+        "folds": [
+          {
+            "fold": 1,
+            "fit_rows": 196806,
+            "validation_rows": 49202,
+            "fit_ids_sha256": "ad52aba5708a7b763fc53ff8d04dd1a3bfb37dbe59c00e99724f8755e8bfb9fb",
+            "validation_ids_sha256": "19dc071a78b27c7621a8aa0211778ad5ecbe2285fdd7c68fdd51906049df562a",
+            "fit_class_counts": {
+              "0": 180918,
+              "1": 15888
+            },
+            "scale_pos_weight": 11.387084592145015,
+            "ap": 0.14502437984029773,
+            "roc_auc": 0.6585594184718633
+          },
+          {
+            "fold": 2,
+            "fit_rows": 196806,
+            "validation_rows": 49202,
+            "fit_ids_sha256": "5b5e69b3acc868626be119b049447a1c88398f7cbd4bbeb89888f814291f309b",
+            "validation_ids_sha256": "79e0e87c23beaa575e0034f44463da0fc65b844bccb5aaa109fc2d50353c0d75",
+            "fit_class_counts": {
+              "0": 180918,
+              "1": 15888
+            },
+            "scale_pos_weight": 11.387084592145015,
+            "ap": 0.1433578910925138,
+            "roc_auc": 0.6501929352248851
+          },
+          {
+            "fold": 3,
+            "fit_rows": 196806,
+            "validation_rows": 49202,
+            "fit_ids_sha256": "bcf077414d7d005dff8dce280c91f75f30509fbc4ffdcb725ab5df174b29218a",
+            "validation_ids_sha256": "89eee9fce0975132fa434a7d6b574799b38ffac34e249cbea66460b2014f02ba",
+            "fit_class_counts": {
+              "0": 180918,
+              "1": 15888
+            },
+            "scale_pos_weight": 11.387084592145015,
+            "ap": 0.1425876247558688,
+            "roc_auc": 0.6528145281396038
+          },
+          {
+            "fold": 4,
+            "fit_rows": 196807,
+            "validation_rows": 49201,
+            "fit_ids_sha256": "482115d292e61161bc686ae1483797f685faf8e94af45a18ae4a26bc5143cbc6",
+            "validation_ids_sha256": "e8dd31e08c5eb068f2a9dddcd41307bac02d99d019de4d78e45235c1e4b56bad",
+            "fit_class_counts": {
+              "0": 180919,
+              "1": 15888
+            },
+            "scale_pos_weight": 11.387147532729104,
+            "ap": 0.1446283377187717,
+            "roc_auc": 0.6517266157047908
+          },
+          {
+            "fold": 5,
+            "fit_rows": 196807,
+            "validation_rows": 49201,
+            "fit_ids_sha256": "23bde3599d304e5ef9e9d22f67771af074508e4540fae4a0b1083a895d0b03ce",
+            "validation_ids_sha256": "4e361f0d97cc2a7539fac4e3ed99a68da59099e510654c0e2967c5d8f8e468bb",
+            "fit_class_counts": {
+              "0": 180919,
+              "1": 15888
+            },
+            "scale_pos_weight": 11.387147532729104,
+            "ap": 0.13957452501714207,
+            "roc_auc": 0.6511492305788088
+          }
+        ],
+        "summary": {
+          "ap_mean": 0.14303455168491883,
+          "ap_std": 0.00193781560545803,
+          "roc_auc_mean": 0.6528885456239903,
+          "roc_auc_std": 0.0029599287434675732
+        },
+        "selection_inputs": {
+          "ap_mean": 0.14303455168491883,
+          "ap_std": 0.00193781560545803,
+          "roc_auc_mean": 0.6528885456239903,
+          "roc_auc_std": 0.0029599287434675732
+        }
+      }
+    },
+    "selection_policy": "max CV mean AP; exact tie: max CV mean ROC-AUC; exact tie: LogisticRegression, RandomForest, XGBoost",
+    "selected_model": "XGBoost",
+    "test_evaluated": false,
+    "model_exported": false
+  },
+  "selection_policy": "max CV mean AP; exact tie: max CV mean ROC-AUC; exact tie: LogisticRegression, RandomForest, XGBoost",
+  "classification_threshold": 0.5,
+  "threshold_policy": "fixed_0.5_before_test",
+  "test_metrics": {
+    "model": "XGBoost",
+    "rows": 61503,
+    "ap": 0.14386124244208243,
+    "roc_auc": 0.6522581181931592,
+    "threshold": 0.5,
+    "precision": 0.12394787438581499,
+    "recall": 0.5842900302114804,
+    "f1": 0.20451180824814946,
+    "confusion_matrix": [
+      [
+        36034,
+        20504
+      ],
+      [
+        2064,
+        2901
+      ]
+    ]
+  },
+  "test_evaluation_count": 1,
+  "risk_bands": {
+    "status": "disabled_pending_calibration",
+    "reason": "Legacy 0.20/0.45 bands were synthetic; OOF review alone does not validate business risk bands or calibrate balanced-class model probabilities.",
+    "source": "Training out-of-fold predictions only",
+    "legacy_thresholds": [
+      0.2,
+      0.45
+    ],
+    "oof_checks": [
+      {
+        "threshold": 0.2,
+        "predicted_positive_rows": 238119,
+        "precision": 0.08260575594555664,
+        "recall": 0.9904330312185297
+      },
+      {
+        "threshold": 0.45,
+        "predicted_positive_rows": 125919,
+        "precision": 0.1114287756414838,
+        "recall": 0.7064954682779456
+      }
+    ]
+  },
+  "probability_calibrated": false,
+  "credit_score_formula": "850 - 550 * payment_difficulty_probability (illustrative, not validated)",
+  "created_at": "2026-11-08T08:25:06.289688+00:00",
+  "pipeline_sha256": "1bd857f7bb44edcc7e6e48280e22368cf702580d2c715df42659e9070b8de2d2",
+  "libraries": {
+    "sklearn": "1.6.0",
+    "pandas": "2.2.3",
+    "numpy": "2.2.1",
+    "xgboost": "2.1.4"
+  },
+  "input_specification": {
+    "AMT_CREDIT": {
+      "kind": "number",
+      "nullable": false,
+      "label": "S\u1ed1 ti\u1ec1n c\u1ea5p t\u00edn d\u1ee5ng",
+      "unit": "HOME_CREDIT_SOURCE (kh\u00f4ng m\u1eb7c \u0111\u1ecbnh VND)"
+    },
+    "AMT_ANNUITY": {
+      "kind": "number",
+      "nullable": true,
+      "label": "S\u1ed1 ti\u1ec1n annuity theo \u0111i\u1ec1u ki\u1ec7n kho\u1ea3n vay",
+      "unit": "HOME_CREDIT_SOURCE; kh\u00f4ng suy ra t\u1ea7n su\u1ea5t"
+    },
+    "DAYS_BIRTH": {
+      "kind": "integer",
+      "nullable": false,
+      "label": "Ng\u00e0y sinh so v\u1edbi ng\u00e0y n\u1ed9p h\u1ed3 s\u01a1",
+      "unit": "ng\u00e0y \u00e2m"
+    },
+    "DAYS_EMPLOYED": {
+      "kind": "integer",
+      "nullable": true,
+      "label": "Ng\u00e0y b\u1eaft \u0111\u1ea7u c\u00f4ng vi\u1ec7c so v\u1edbi ng\u00e0y n\u1ed9p",
+      "unit": "ng\u00e0y kh\u00f4ng d\u01b0\u01a1ng; 365243 = kh\u00f4ng bi\u1ebft"
+    },
+    "NAME_CONTRACT_TYPE": {
+      "kind": "string",
+      "nullable": false,
+      "label": "Lo\u1ea1i h\u1ee3p \u0111\u1ed3ng",
+      "unit": "danh m\u1ee5c",
+      "choices": [
+        "Cash loans",
+        "Revolving loans"
+      ]
+    },
+    "OCCUPATION_TYPE": {
+      "kind": "string",
+      "nullable": true,
+      "label": "Nh\u00f3m ngh\u1ec1 theo Home Credit",
+      "unit": "danh m\u1ee5c"
+    }
+  },
+  "amount_unit": "HOME_CREDIT_SOURCE"
+}

@@ -1,18 +1,49 @@
-import type { ReactElement } from "react";
+import { lazy, Suspense, type ReactElement } from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
 import { useAuth } from "./auth/AuthContext";
 import { Layout } from "./components/Layout";
 import { Loading } from "./components/Loading";
-import { CustomersPage } from "./pages/CustomersPage";
-import { DashboardPage } from "./pages/DashboardPage";
-import { LoanDetailPage } from "./pages/LoanDetailPage";
-import { LoanFormPage } from "./pages/LoanFormPage";
-import { LoansPage } from "./pages/LoansPage";
-import { LoginPage } from "./pages/LoginPage";
-import { ModelsPage } from "./pages/ModelsPage";
-import { PredictionHistoryPage } from "./pages/PredictionHistoryPage";
-import { RiskAssessmentResultPage } from "./pages/RiskAssessmentResultPage";
-import { UsersPage } from "./pages/UsersPage";
+const LoginPage = lazy(() =>
+  import("./pages/LoginPage").then((module) => ({ default: module.LoginPage })),
+);
+const ModelsPage = lazy(() =>
+  import("./pages/ModelsPage").then((module) => ({
+    default: module.ModelsPage,
+  })),
+);
+const UsersPage = lazy(() =>
+  import("./pages/UsersPage").then((module) => ({ default: module.UsersPage })),
+);
+const CreditCaseListPage = lazy(() =>
+  import("./pages/CreditCaseListPage").then((module) => ({
+    default: module.CreditCaseListPage,
+  })),
+);
+const CreditCaseDetailPage = lazy(() =>
+  import("./pages/CreditCaseDetailPage").then((module) => ({
+    default: module.CreditCaseDetailPage,
+  })),
+);
+const CreditCaseCreatePage = lazy(() =>
+  import("./pages/CreditCaseDetailPage").then((module) => ({
+    default: module.CreditCaseCreatePage,
+  })),
+);
+const CreditCaseHistoryPage = lazy(() =>
+  import("./pages/CreditCaseHistoryPage").then((module) => ({
+    default: module.CreditCaseHistoryPage,
+  })),
+);
+const CreditDashboardPage = lazy(() =>
+  import("./pages/CreditDashboardPage").then((module) => ({
+    default: module.CreditDashboardPage,
+  })),
+);
+const CreditAssessmentPage = lazy(() =>
+  import("./pages/CreditAssessmentPage").then((module) => ({
+    default: module.CreditAssessmentPage,
+  })),
+);
 
 function Private({ children }: { children: ReactElement }) {
   const { user, loading } = useAuth();
@@ -29,57 +60,97 @@ function AdminOnly({ children }: { children: ReactElement }) {
 
 function WriterOnly({ children }: { children: ReactElement }) {
   const { user } = useAuth();
-  if (user?.role === "RISK_VIEWER") return <Navigate to="/loans" replace />;
+  if (user?.role !== "ADMIN" && user?.role !== "OFFICER")
+    return <Navigate to="/loans" replace />;
   return children;
 }
 
 export default function App() {
   const { user } = useAuth();
   return (
-    <Routes>
-      <Route path="/login" element={user ? <Navigate to="/" /> : <LoginPage />} />
-      <Route
-        path="/"
-        element={
-          <Private>
-            <Layout />
-          </Private>
-        }
-      >
-        <Route index element={<DashboardPage />} />
-        <Route path="customers" element={<CustomersPage />} />
-        <Route path="loans" element={<LoansPage />} />
+    <Suspense fallback={<Loading label="?ang t?i giao di?n?" />}>
+      <Routes>
         <Route
-          path="loans/new"
-          element={
-            <WriterOnly>
-              <LoanFormPage />
-            </WriterOnly>
-          }
+          path="/login"
+          element={user ? <Navigate to="/" /> : <LoginPage />}
         />
-        <Route path="loans/:id" element={<LoanDetailPage />} />
-        <Route path="loans/:id/result" element={<RiskAssessmentResultPage />} />
-        <Route path="risk-assessment" element={<RiskAssessmentResultPage />} />
-        <Route path="predictions" element={<PredictionHistoryPage />} />
         <Route
-          path="loans/:id/edit"
+          path="/"
           element={
-            <WriterOnly>
-              <LoanFormPage />
-            </WriterOnly>
+            <Private>
+              <Layout />
+            </Private>
           }
-        />
-        <Route path="models" element={<ModelsPage />} />
-        <Route
-          path="users"
-          element={
-            <AdminOnly>
-              <UsersPage />
-            </AdminOnly>
-          }
-        />
-      </Route>
-      <Route path="*" element={<Navigate to="/" />} />
-    </Routes>
+        >
+          <Route index element={<CreditDashboardPage />} />
+          <Route path="customers" element={<CreditCaseListPage />} />
+          <Route
+            path="customers/new"
+            element={
+              <WriterOnly>
+                <CreditCaseCreatePage />
+              </WriterOnly>
+            }
+          />
+          <Route
+            path="customers/:id"
+            element={<CreditCaseDetailPage mode="customers" />}
+          />
+          <Route
+            path="loans"
+            element={<CreditCaseListPage key="loans" mode="loans" />}
+          />
+          <Route
+            path="loans/new"
+            element={
+              <WriterOnly>
+                <Navigate to="/customers/new" replace />
+              </WriterOnly>
+            }
+          />
+          <Route path="loans/:id" element={<CreditCaseDetailPage />} />
+          <Route path="loans/:id/result" element={<CreditCaseDetailPage />} />
+          <Route
+            path="risk-assessment"
+            element={
+              <WriterOnly>
+                <CreditAssessmentPage />
+              </WriterOnly>
+            }
+          />
+          <Route
+            path="risk-assessment/:id"
+            element={
+              <WriterOnly>
+                <CreditCaseDetailPage mode="assessment" />
+              </WriterOnly>
+            }
+          />
+          <Route
+            path="home-credit"
+            element={<Navigate to="/customers" replace />}
+          />
+          <Route path="predictions" element={<CreditCaseHistoryPage />} />
+          <Route
+            path="loans/:id/edit"
+            element={
+              <WriterOnly>
+                <CreditCaseDetailPage mode="assessment" />
+              </WriterOnly>
+            }
+          />
+          <Route path="models" element={<ModelsPage />} />
+          <Route
+            path="users"
+            element={
+              <AdminOnly>
+                <UsersPage />
+              </AdminOnly>
+            }
+          />
+        </Route>
+        <Route path="*" element={<Navigate to="/" />} />
+      </Routes>
+    </Suspense>
   );
 }

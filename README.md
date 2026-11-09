@@ -1,10 +1,14 @@
 # Hệ thống hỗ trợ đánh giá rủi ro tín dụng và dự đoán khả năng trả nợ bằng máy học
 
 **Đề tài Niên luận Kỹ thuật phần mềm**  
-Hệ thống **hỗ trợ** cán bộ tín dụng ước lượng xác suất vỡ nợ bằng Machine Learning và Explainable AI (SHAP), **không** thay thế quyết định cấp tín dụng thực tế, **không** kết nối ngân hàng thật và **không** dùng dữ liệu cá nhân thật.
+Hệ thống **hỗ trợ** cán bộ tín dụng ước lượng rủi ro gặp khó khăn thanh toán theo Home Credit bằng Machine Learning, **không** thay thế quyết định cấp tín dụng thực tế và **không** kết nối ngân hàng thật. Hồ sơ và giải thích SHAP mô phỏng cũ được giữ để xem lịch sử.
 
 > **Cảnh báo bắt buộc:** Kết quả chỉ mang tính hỗ trợ đánh giá rủi ro, không thay thế quyết định cấp tín dụng thực tế.  
-> **Dữ liệu mô phỏng:** Toàn bộ khách hàng, hồ sơ vay và tập dữ liệu huấn luyện đều là dữ liệu mô phỏng (synthetic data).
+> **Nguồn dữ liệu:** Mô hình đang phục vụ là Home Credit `home-credit-v1-20261108`. Theo yêu cầu thay demo cũ, đã sao lưu rồi xóa 6 hồ sơ mô phỏng, nạp toàn bộ **307511 hồ sơ Home Credit** vào PostgreSQL. Có thể mở từng hồ sơ, dự đoán và lưu lịch sử. Xem [cách dùng và kết quả kiểm tra](docs/home_credit_customer_flow.md).
+
+**Sử dụng ngay:** `http://localhost:3000/customers` → chọn hồ sơ → **Dự đoán và lưu kết quả**.
+CSV không có họ tên thật nên danh sách dùng mã hồ sơ ẩn danh. TARGET gốc hiển thị riêng,
+không gửi vào mô hình. Dữ liệu đã ở volume Docker; không cần import/huấn luyện lại mỗi lần mở app.
 
 ---
 
@@ -59,11 +63,16 @@ Hệ thống **hỗ trợ** cán bộ tín dụng ước lượng xác suất v�
 
 ## 4. Tài khoản demo
 
+Hệ thống chỉ có hai vai trò hoạt động: `ADMIN` và `OFFICER`. Khách hàng là hồ sơ nghiệp vụ, không cần tài khoản đăng nhập. Tài khoản Viewer cũ đã ngừng sử dụng; chi tiết migration và kiểm tra tại [docs/two_roles.md](docs/two_roles.md).
+
+Trang đăng nhập có nút điền nhanh cho hai tài khoản Admin và Officer `.com` dưới đây. Nút chỉ điền thông tin; bấm **Đăng nhập** để xác thực. Nếu mật khẩu đã được đổi, nhập mật khẩu hiện tại.
+
+Backend tạo tài khoản khi chưa có. Với tài khoản demo cũ dùng đuôi `.local`, bước seed chỉ đổi email sang `.com`, giữ ID, vai trò và mật khẩu đã băm. Nếu cả hai địa chỉ cùng tồn tại, dùng `.com` và giữ nguyên cả hai; nếu tài khoản được chọn sai vai trò, seed báo xung đột để kiểm tra. Không cần xóa database hay Docker volume. `ADMIN_EMAIL` vẫn hỗ trợ địa chỉ quản trị tùy chỉnh; cấu hình mặc định dùng `admin@credit-risk.com`.
+
 | Vai trò | Email | Mật khẩu | Quyền hạn |
 |---|---|---|---|
 | **ADMIN** | `admin@credit-risk.com` | `Admin@123456` | Quản trị người dùng, mô hình, toàn bộ dữ liệu |
-| **CREDIT_OFFICER** | `officer@credit-risk.com` | `Officer@123456` | Quản lý khách hàng, tạo hồ sơ vay, chạy đánh giá ML |
-| **RISK_VIEWER** | `viewer@credit-risk.com` | `Viewer@123456` | Chỉ xem dashboard, hồ sơ vay, kết quả và báo cáo |
+| **OFFICER** | `officer@credit-risk.com` | `Officer@123456` | Quản lý khách hàng, tạo hồ sơ vay, chạy đánh giá ML |
 
 ---
 
@@ -79,6 +88,13 @@ cp .env.example .env
 docker compose up --build
 ```
 
+Đã kiểm tra chạy thực tế trên Docker Desktop: PostgreSQL, backend, ML Service và frontend.
+ML Service cần `active_model.json` và thư mục phiên bản Home Credit tương ứng trong
+volume `ml_artifacts`. Binary mô hình được lưu cục bộ và Git bỏ qua. Với volume cũ,
+phải sao chép bản phiên bản đã xác minh cùng manifest vào volume hoặc huấn luyện và
+kích hoạt trong môi trường đó. Không tự huấn luyện lúc khởi động. Khi cần thay dữ liệu
+mô phỏng, dùng importer có backup trong [hướng dẫn hồ sơ khách hàng](docs/home_credit_customer_flow.md).
+
 **Các cổng truy cập:**
 - **Frontend App:** [http://localhost:3000](http://localhost:3000)
 - **Backend API Docs (Swagger):** [http://localhost:8000/docs](http://localhost:8000/docs)
@@ -92,7 +108,7 @@ docker compose up --build
 ```bash
 cd ml-service
 python -m pip install -r requirements.txt
-python training/train.py
+# Cần artifact Home Credit đã train và activate theo mục 7.
 uvicorn app.main:app --host 0.0.0.0 --port 8001 --reload
 ```
 
@@ -128,26 +144,49 @@ python -m pytest
 
 ---
 
-## 7. Huấn luyện lại mô hình máy học
+## 7. Huấn luyện và phục vụ Home Credit
 
-```bash
-cd ml-service
-python training/train.py
+Chỉ dùng bảng có nhãn `application_train.csv`. Chia phân tầng một lần 80% Training /
+20% Test với `random_state=42`. Trên Training, cả ba mô hình chạy cùng 5 fold phân tầng
+(`shuffle=True`, `random_state=42`), mỗi lượt fit Pipeline mới. Chọn **AP CV trung bình
+cao nhất**, hòa thì ROC-AUC CV trung bình, vẫn hòa thì Logistic Regression → Random
+Forest → XGBoost. Không dùng điểm tổng hợp hoặc kết quả Test để chọn thuật toán.
+
+Ngưỡng phân loại **0,5** được cố định trước khi mở Test. Fit lại toàn bộ Pipeline trên
+Training, đánh giá mô hình đã chốt **một lần** trên Test. Không dùng `application_test.csv`
+Kaggle để đánh giá. Hai ngưỡng nhóm rủi ro 0,20/0,45 cũ chỉ được kiểm tra bằng OOF của
+Training và đang **tắt**; phản hồi mới là `NOT_VALIDATED`, xác suất chưa hiệu chỉnh.
+
+```powershell
+# Kiểm tra 15 lượt CV bằng 150 dòng nhân tạo; không đọc CSV thật hay đánh giá Test thật.
+& './ml-service/.venv/Scripts/python.exe' ml-service/training/train.py --mode cv-smoke --sample-size 150
 ```
 
-Quy trình huấn luyện:
-- Tự động sinh tập dữ liệu mô phỏng có nhãn tại `data/simulated_credit_risk.csv`.
-- So sánh 3 mô hình: **Logistic Regression**, **Random Forest**, **XGBoost** dựa trên:
-  $$\text{Score} = 0.45 \times \text{ROC-AUC} + 0.35 \times \text{PR-AUC} + 0.20 \times \text{F1}$$
-- Không đánh giá chỉ theo Accuracy do phân phối dữ liệu thực tế mất cân bằng.
-- Xuất artifacts vào `artifacts/`:
-  - `credit_pipeline.joblib`: Pipeline hoàn chỉnh (Imputer, Scaler, Encoder, Model).
-  - `model_metadata.json`: Siêu dữ liệu phiên bản và metrics.
-  - `plots/roc_curve.png`: Biểu đồ đường cong ROC.
-  - `plots/pr_curve.png`: Biểu đồ đường cong Precision-Recall.
-  - `plots/confusion_matrix.png`: Ma trận nhầm lẫn.
-  - `plots/feature_importance.png`: Tầm quan trọng của các đặc trưng.
-  - `plots/shap_summary.png`: Biểu đồ phân tích SHAP Summary.
+```powershell
+# Từ gốc repo; dùng tên phiên bản MỚI khi tái lập, không ghi đè phiên bản hiện có.
+$env:HOME_CREDIT_DATA_DIR = 'D:/HK1_nam_4/CT250H_nien_luan_chuyen_nganh/home-credit-default-risk'
+& './ml-service/.venv/Scripts/python.exe' ml-service/training/train.py --mode train --version home-credit-v1-repro --report docs/home_credit_repro_results.json
+Push-Location ml-service
+& './.venv/Scripts/python.exe' -m training.activate --version home-credit-v1-repro
+Pop-Location
+```
+
+Lệnh tự tìm CSV trong thư mục `home-credit-default-risk` bên trong hoặc cạnh repo;
+có thể truyền `--application-csv`, `--description-csv`, `--data-dir` hoặc biến môi trường.
+`--mode prepare` (mặc định) chỉ audit và thử tiền xử lý trên mẫu Training;
+`--mode cv` chỉ so sánh CV; `--mode train --version ...` chạy đầy đủ và lưu candidate.
+Không fallback sang dữ liệu mô phỏng nếu CSV lỗi. Các biến `HOME_CREDIT_APPLICATION_CSV`
+và `HOME_CREDIT_DESCRIPTION_CSV` hỗ trợ cấu hình từng tệp. `ARTIFACT_DIR` cấu hình nơi
+ML Service nạp manifest; nếu dùng đường dẫn khác, truyền cùng nơi đó cho training/activation.
+
+Candidate nằm ở `ml-service/artifacts/versions/<version>/`: Pipeline chứa classifier,
+metadata CV/Test, khóa lựa chọn trước Test, yêu cầu mẫu và báo cáo kiểm tra API.
+Chỉ lệnh activate mới cập nhật `active_model.json`, sau khi reload và kiểm tra API thành công.
+Điểm hồ sơ `850 - 550*p` vẫn là minh họa, tách biệt hoàn toàn với tiêu chí AP chọn thuật toán.
+
+Định nghĩa thuộc tính, bảng đối chiếu, kết quả kiểm tra thực tế, lệnh PowerShell và
+Docker: [Home Credit preparation](docs/home_credit_preparation.md).
+Kết quả thật và giới hạn: [Home Credit release](docs/home_credit_release.md).
 
 ---
 
@@ -157,10 +196,8 @@ Quy trình huấn luyện:
 2. **Dashboard:** Xem thống kê hồ sơ, biểu đồ tròn phân bố rủi ro, phân bố điểm tín dụng mô phỏng.
 3. **Quản lý khách hàng:** Vào menu **Khách hàng**, bấm xem hoặc tạo mới khách hàng mẫu.
 4. **Hồ sơ vay:** Vào menu **Hồ sơ vay**, bấm **Import CSV** chọn tệp `database/sample_loan_import.csv` để nạp dữ liệu nhanh.
-5. **Đánh giá rủi ro & SHAP:** Mở một hồ sơ bất kỳ, bấm **Đánh giá rủi ro** (hoặc mở menu **Đánh giá rủi ro**), xem:
-   - Điểm tín dụng mô phỏng (300 - 850).
-   - Xác suất vỡ nợ vs Khả năng trả nợ.
-   - Nhóm rủi ro (LOW, MEDIUM, HIGH) và đề xuất xử lý hồ sơ.
-   - Biểu đồ SHAP thanh ngang với yếu tố tăng (đỏ) và giảm (xanh) rủi ro.
+5. **Dự đoán theo khách hàng:** Vào Khách hàng hoặc Hồ sơ và dự đoán, chọn hồ sơ Home Credit,
+   kiểm tra 6 đầu vào, bấm Dự đoán và lưu kết quả. Mỗi lần lưu gắn đúng hồ sơ, snapshot đầu
+   vào và phiên bản mô hình; mở Lịch sử dự đoán để xem lại. Không mặc định số tiền là VND.
 6. **Lịch sử dự đoán:** Vào menu **Lịch sử dự đoán**, lọc theo nhóm rủi ro, mở modal xem chi tiết SHAP của các lượt đánh giá cũ.
 7. **Phân quyền:** Đăng xuất và đăng nhập tài khoản `admin@credit-risk.com` / `Admin@123456` để kiểm tra trang **Người dùng** và **Mô hình**.

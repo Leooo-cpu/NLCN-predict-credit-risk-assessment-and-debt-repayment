@@ -1,0 +1,30 @@
+- generic [ref=f2e2]:
+  - main [ref=f2e3]:
+    - generic [ref=f2e4]:
+      - generic [ref=f2e5]:
+        - generic [aria-hidden] [ref=f2e6]: CR
+        - generic [ref=f2e7]:
+          - paragraph [ref=f2e8]: Rủi ro tín dụng
+          - paragraph [ref=f2e9]: Home Credit · Niên luận KTPM
+      - generic [ref=f2e10]:
+        - generic [ref=f2e11]:
+          - heading "Đăng nhập hệ thống" [level=1] [ref=f2e12]
+          - paragraph [ref=f2e13]: Hỗ trợ đánh giá rủi ro tín dụng
+        - group "Thông tin đăng nhập" [ref=f2e14]:
+          - generic [ref=f2e16]:
+            - text: Email
+            - textbox "Email" [ref=f2e17]: officer@credit-risk.com
+          - generic [ref=f2e18]:
+            - text: Mật khẩu
+            - textbox "Mật khẩu" [ref=f2e19]: Officer@123456
+        - button "Đăng nhập" [ref=f2e20] [cursor=pointer]
+        - button "Chưa có tài khoản? Đăng ký" [ref=f2e21] [cursor=pointer]
+        - generic [ref=f2e22]:
+          - paragraph [ref=f2e23]: "Điền nhanh tài khoản demo, sau đó bấm Đăng nhập:"
+          - 'button "Admin: admin@credit-risk.com" [ref=f2e24] [cursor=pointer]':
+            - generic [ref=f2e25]: "Admin:"
+            - generic [ref=f2e26]: admin@credit-risk.com
+          - 'button "Officer: officer@credit-risk.com" [ref=f2e27] [cursor=pointer]':
+            - generic [ref=f2e28]: "Officer:"
+            - generic [ref=f2e29]: officer@credit-risk.com
+  - generic "Thông báo"

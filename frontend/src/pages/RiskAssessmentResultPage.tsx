@@ -19,10 +19,9 @@ export function RiskAssessmentResultPage() {
   const [prediction, setPrediction] = useState<Prediction | null>(null);
   const [history, setHistory] = useState<Prediction[]>([]);
   const [loading, setLoading] = useState(false);
-  const [scoring, setScoring] = useState(false);
   const toast = useToast();
   const { user } = useAuth();
-  const canScore = user?.role === "ADMIN" || user?.role === "CREDIT_OFFICER";
+  const canScore = user?.role === "ADMIN" || user?.role === "OFFICER";
 
   // Load list of available loans for quick selection
   useEffect(() => {
@@ -56,21 +55,6 @@ export function RiskAssessmentResultPage() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentLoanId]);
-
-  async function handleScore() {
-    if (!currentLoanId) return;
-    setScoring(true);
-    try {
-      const res = await api.post<Prediction>(`/api/loan-applications/${currentLoanId}/score`);
-      setPrediction(res.data);
-      toast.success("Đã hoàn thành đánh giá rủi ro bằng mô hình máy học!");
-      await loadData(currentLoanId);
-    } catch (err) {
-      toast.error(errorMessage(err));
-    } finally {
-      setScoring(false);
-    }
-  }
 
   function handleSelectLoan(newId: string) {
     if (paramId) {
@@ -131,7 +115,7 @@ export function RiskAssessmentResultPage() {
       <div className="flex flex-wrap items-center justify-between gap-4 border-b pb-4">
         <div>
           <h2 className="text-2xl font-bold text-slate-900">
-            Kết quả đánh giá rủi ro tín dụng & Giải thích máy học
+             Kết quả lịch sử mô phỏng & Giải thích máy học
           </h2>
           <p className="text-sm text-slate-500">
             Ứng dụng Machine Learning phân tích xác suất vỡ nợ, điểm tín dụng mô phỏng và SHAP Values
@@ -152,13 +136,7 @@ export function RiskAssessmentResultPage() {
             ))}
           </select>
           {canScore && loan && (
-            <button
-              className="btn-primary"
-              onClick={handleScore}
-              disabled={scoring}
-            >
-              {scoring ? "Đang chạy mô hình..." : "Chạy đánh giá mới"}
-            </button>
+              <Link className="btn-primary" to="/home-credit">Bổ sung đầu vào Home Credit</Link>
           )}
           <button
             className="btn-ghost"

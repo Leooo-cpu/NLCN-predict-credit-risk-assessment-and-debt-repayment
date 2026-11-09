@@ -4,6 +4,11 @@ export default {
   theme: {
     extend: {
       colors: {
+        surface: "rgb(var(--surface) / <alpha-value>)",
+        canvas: "rgb(var(--canvas) / <alpha-value>)",
+        ink: "rgb(var(--ink) / <alpha-value>)",
+        muted: "rgb(var(--muted) / <alpha-value>)",
+        line: "rgb(var(--line) / <alpha-value>)",
         brand: {
           50: "#eef6ff",
           100: "#d9ebff",

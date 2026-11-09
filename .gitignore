@@ -43,9 +43,14 @@ Thumbs.db
 # ML artifacts (keep directory, ignore large binaries except committed demo model)
 ml-service/artifacts/*.pkl
 ml-service/artifacts/*.joblib
+ml-service/artifacts/versions/**/*.joblib
 ml-service/artifacts/plots/
 ml-service/data/raw/
 ml-service/data/processed/
+**/home-credit-default-risk/*.csv
+**/application_train.csv
+**/application_test.csv
+**/HomeCredit_columns_description.csv
 !ml-service/artifacts/.gitkeep
 
 # Database
@@ -58,5 +63,6 @@ docker-data/
 
 # Coverage / reports
 reports/
+backups/
 backend/.coverage
 ml-service/.coverage

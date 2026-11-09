@@ -1,5 +1,6 @@
 from datetime import date, timedelta
 from decimal import Decimal
+import logging
 
 from sqlalchemy.orm import Session
 
@@ -12,17 +13,31 @@ from app.models.user import User
 from app.services.risk import compute_dti
 
 settings = get_settings()
+logger = logging.getLogger(__name__)
 
 
 def ensure_default_users(db: Session) -> list[User]:
     specs = [
-        (settings.admin_email, settings.admin_full_name, settings.admin_password, "ADMIN"),
-        ("officer@credit-risk.com", "Cán bộ tín dụng Demo", "Officer@123456", "CREDIT_OFFICER"),
-        ("viewer@credit-risk.com", "Người xem rủi ro Demo", "Viewer@123456", "RISK_VIEWER"),
+        ("admin@credit-risk.com" if settings.admin_email.lower() == "admin@credit-risk.local" else settings.admin_email.lower(), settings.admin_full_name, settings.admin_password, "ADMIN"),
+        ("officer@credit-risk.com", "Cán bộ tín dụng Demo", "Officer@123456", "OFFICER"),
     ]
-    created: list[User] = []
+    # Preflight all demo addresses before modifying any record. Prefer existing
+    # .com users; never merge accounts, change roles, or reset stored passwords.
+    resolved = []
     for email, name, password, role in specs:
         user = db.query(User).filter(User.email == email).first()
+        legacy_email = email.removesuffix(".com") + ".local" if email in {
+            "admin@credit-risk.com", "officer@credit-risk.com"
+        } else None
+        legacy = db.query(User).filter(User.email == legacy_email).first() if legacy_email else None
+        selected = user if user is not None else legacy
+        if legacy_email and selected is not None and selected.role != role:
+            raise RuntimeError(f"Xung đột vai trò tài khoản demo {selected.email}; cần kiểm tra trước khi cập nhật email")
+        if user is not None and legacy is not None:
+            logger.warning("Cả %s và %s đã tồn tại; dùng tài khoản .com, giữ nguyên hai tài khoản", email, legacy_email)
+        resolved.append((email, name, password, role, selected))
+    created: list[User] = []
+    for email, name, password, role, user in resolved:
         if user is None:
             user = User(
                 email=email,
@@ -33,13 +48,15 @@ def ensure_default_users(db: Session) -> list[User]:
             )
             db.add(user)
             db.flush()
+        elif user.email != email:
+            user.email = email
         created.append(user)
     db.commit()
     return created
 
 
 def ensure_model_registry(db: Session) -> None:
-    existing = db.query(ModelRegistry).filter(ModelRegistry.status == "ACTIVE").first()
+    existing = db.query(ModelRegistry).filter(ModelRegistry.version == "1.0.0-sim").first()
     if existing:
         return
     db.add(
@@ -52,7 +69,7 @@ def ensure_model_registry(db: Session) -> None:
                 "note": "Mô hình demo trên dữ liệu mô phỏng. Metrics đầy đủ nằm ở ML Service.",
                 "dataset": "simulated",
             },
-            status="ACTIVE",
+            status="HISTORICAL",
             artifact_path="/app/artifacts/credit_pipeline.joblib",
         )
     )
@@ -199,6 +216,6 @@ def ensure_demo_records(db: Session, officer: User) -> None:
 
 def seed_if_needed(db: Session) -> None:
     users = ensure_default_users(db)
-    officer = next((u for u in users if u.role == "CREDIT_OFFICER"), users[0])
-    ensure_model_registry(db)
-    ensure_demo_records(db, officer)
+    officer = next((u for u in users if u.role == "OFFICER"), users[0])
+    # Keep accounts, but never recreate synthetic customers/results after replacement.
+    # Home Credit records are imported explicitly from the real labeled CSV.

@@ -1,4 +1,5 @@
 from tests.conftest import login
+from app.core.security import create_access_token
 
 
 def test_officer_can_create_customer(client):
@@ -23,7 +24,7 @@ def test_officer_can_create_customer(client):
 
 
 def test_viewer_cannot_create_customer(client):
-    token = login(client, "viewer@test.com", "Viewer@123456")
+    token = create_access_token("viewer@test.com", "RISK_VIEWER")
     res = client.post(
         "/api/customers",
         headers={"Authorization": f"Bearer {token}"},
@@ -39,7 +40,7 @@ def test_viewer_cannot_create_customer(client):
             "existing_loans": 0,
         },
     )
-    assert res.status_code == 403
+    assert res.status_code == 401
 
 
 def test_users_admin_only(client):

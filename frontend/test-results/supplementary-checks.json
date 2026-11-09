@@ -1,0 +1,30 @@
+[
+  {
+    "name": "server validation focused and described",
+    "pass": true
+  },
+  {
+    "name": "user native validation described",
+    "pass": true
+  },
+  {
+    "name": "new case saves and scores then navigates",
+    "pass": true
+  },
+  {
+    "name": "alias /loans/new",
+    "pass": true
+  },
+  {
+    "name": "alias /home-credit",
+    "pass": true
+  },
+  {
+    "name": "alias /loans/1/edit",
+    "pass": true
+  },
+  {
+    "name": "alias /loans/1/result",
+    "pass": true
+  }
+]

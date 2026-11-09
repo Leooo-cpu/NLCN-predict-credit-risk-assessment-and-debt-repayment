@@ -14,10 +14,9 @@ export function LoanDetailPage() {
   const [prediction, setPrediction] = useState<Prediction | null>(null);
   const [history, setHistory] = useState<Prediction[]>([]);
   const [loading, setLoading] = useState(true);
-  const [scoring, setScoring] = useState(false);
   const toast = useToast();
   const { user } = useAuth();
-  const canScore = user?.role === "ADMIN" || user?.role === "CREDIT_OFFICER";
+  const canScore = user?.role === "ADMIN" || user?.role === "OFFICER";
 
   async function load() {
     if (!id) return;
@@ -41,21 +40,6 @@ export function LoanDetailPage() {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
-
-  async function score() {
-    if (!id) return;
-    setScoring(true);
-    try {
-      const res = await api.post<Prediction>(`/api/loan-applications/${id}/score`);
-      setPrediction(res.data);
-      toast.success("Đã đánh giá rủi ro");
-      await load();
-    } catch (err) {
-      toast.error(errorMessage(err));
-    } finally {
-      setScoring(false);
-    }
-  }
 
   if (loading) return <Loading />;
   if (!loan) return null;
@@ -82,9 +66,7 @@ export function LoanDetailPage() {
             <Link className="btn-ghost" to={`/loans/${loan.id}/edit`}>Sửa</Link>
           )}
           {canScore && (
-            <button className="btn-primary" onClick={score} disabled={scoring}>
-              {scoring ? "Đang đánh giá..." : "Đánh giá rủi ro"}
-            </button>
+            <Link className="btn-primary" to="/home-credit">Bổ sung đầu vào Home Credit</Link>
           )}
         </div>
       </div>

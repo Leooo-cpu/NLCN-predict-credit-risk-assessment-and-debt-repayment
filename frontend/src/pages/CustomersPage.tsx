@@ -31,7 +31,7 @@ export function CustomersPage() {
   const [editing, setEditing] = useState<number | null>(null);
   const toast = useToast();
   const { user } = useAuth();
-  const canWrite = user?.role !== "RISK_VIEWER";
+  const canWrite = (user?.role === "ADMIN" || user?.role === "OFFICER");
 
   async function load(p = page) {
     setLoading(true);

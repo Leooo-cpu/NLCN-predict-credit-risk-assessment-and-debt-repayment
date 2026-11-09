@@ -17,7 +17,7 @@ router = APIRouter(prefix="/api/auth", tags=["auth"])
 @router.post("/register", response_model=UserPublic, status_code=201)
 def register(payload: RegisterRequest, db: Session = Depends(get_db)):
     if payload.role not in ALL_ROLES or payload.role == "ADMIN":
-        raise AppError("Chỉ được tự đăng ký vai trò CREDIT_OFFICER hoặc RISK_VIEWER", 400)
+        raise AppError("Chỉ được tự đăng ký vai trò OFFICER", 400)
     if db.query(User).filter(User.email == payload.email.lower()).first():
         raise AppError("Email đã tồn tại", 400)
     user = User(
@@ -39,8 +39,8 @@ def login(payload: LoginRequest, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.email == payload.email.lower()).first()
     if user is None or not verify_password(payload.password, user.hashed_password):
         raise UnauthorizedError("Email hoặc mật khẩu không đúng")
-    if not user.is_active:
-        raise UnauthorizedError("Tài khoản đã bị khóa")
+    if not user.is_active or user.role not in ALL_ROLES:
+        raise UnauthorizedError("Tài khoản đã bị khóa hoặc vai trò không còn được hỗ trợ")
     token = create_access_token(user.email, user.role, extra={"uid": user.id})
     write_audit(db, user=user, action="LOGIN", entity_type="user", entity_id=user.id)
     return TokenResponse(access_token=token, user=UserPublic.model_validate(user))

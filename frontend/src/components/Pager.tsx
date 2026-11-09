@@ -3,26 +3,39 @@ export function Pager({
   pageSize,
   total,
   onPage,
+  disabled = false,
 }: {
   page: number;
   pageSize: number;
   total: number;
   onPage: (page: number) => void;
+  disabled?: boolean;
 }) {
   const pages = Math.max(1, Math.ceil(total / pageSize));
   return (
-    <div className="mt-4 flex items-center justify-between text-sm text-slate-600">
-      <span>
-        Trang {page}/{pages} · {total} bản ghi
-      </span>
-      <div className="space-x-2">
-        <button className="btn-ghost" disabled={page <= 1} onClick={() => onPage(page - 1)}>
-          Trước
+    <nav aria-label="Phân trang" className="pager">
+      <p aria-live="polite">
+        Trang <strong>{page}</strong> / {pages} ·{" "}
+        {total.toLocaleString("vi-VN")} bản ghi
+      </p>
+      <div className="flex gap-2">
+        <button
+          type="button"
+          className="btn-secondary"
+          disabled={disabled || page <= 1}
+          onClick={() => onPage(page - 1)}
+        >
+          ← Trước
         </button>
-        <button className="btn-ghost" disabled={page >= pages} onClick={() => onPage(page + 1)}>
-          Sau
+        <button
+          type="button"
+          className="btn-secondary"
+          disabled={disabled || page >= pages}
+          onClick={() => onPage(page + 1)}
+        >
+          Sau →
         </button>
       </div>
-    </div>
+    </nav>
   );
 }

@@ -1,63 +1,144 @@
-import { NavLink, Outlet, useNavigate } from "react-router-dom";
+import { useEffect, useRef } from "react";
+import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
+import { SidebarContent } from "./SidebarContent";
 import { Disclaimer } from "./Disclaimer";
 
-const linkClass = ({ isActive }: { isActive: boolean }) =>
-  `block rounded-lg px-3 py-2 text-sm ${isActive ? "bg-brand-600 text-white" : "text-slate-200 hover:bg-slate-700"}`;
-
 export function Layout() {
-  const { user, logout } = useAuth();
+  const { logout } = useAuth();
   const navigate = useNavigate();
-
+  const location = useLocation();
+  const drawer = useRef<HTMLDialogElement>(null);
+  const trigger = useRef<HTMLButtonElement>(null);
+  const previousOverflow = useRef("");
+  const main = useRef<HTMLElement>(null);
+  const priorLocation = useRef(location.pathname);
+  function close() {
+    drawer.current?.close();
+  }
+  useEffect(() => {
+    if (location.pathname !== priorLocation.current) {
+      drawer.current?.close();
+      main.current?.focus();
+      priorLocation.current = location.pathname;
+    }
+  }, [location.pathname]);
+  useEffect(() => {
+    const element = drawer.current;
+    return () => {
+      if (element?.open)
+        document.body.style.overflow = previousOverflow.current;
+    };
+  }, []);
+  useEffect(() => {
+    const query = window.matchMedia("(min-width: 1024px)");
+    const onChange = () => {
+      if (query.matches) drawer.current?.close();
+    };
+    query.addEventListener("change", onChange);
+    return () => query.removeEventListener("change", onChange);
+  }, []);
+  const navigation = (
+    <SidebarContent
+      onNavigate={close}
+      onLogout={() => {
+        close();
+        logout();
+        navigate("/login");
+      }}
+    />
+  );
   return (
-    <div className="min-h-screen grid grid-cols-[240px_1fr]">
-      <aside className="bg-slate-900 p-4 text-white">
-        <h1 className="text-lg font-semibold leading-tight">Rủi ro tín dụng</h1>
-        <p className="mt-1 text-xs text-slate-400">Hệ thống hỗ trợ · Niên luận KTPM</p>
-        <nav className="mt-6 space-y-1">
-          <NavLink to="/" className={linkClass} end>
-            Dashboard
-          </NavLink>
-          <NavLink to="/customers" className={linkClass}>
-            Khách hàng
-          </NavLink>
-          <NavLink to="/loans" className={linkClass}>
-            Hồ sơ vay
-          </NavLink>
-          <NavLink to="/risk-assessment" className={linkClass}>
-            Đánh giá rủi ro
-          </NavLink>
-          <NavLink to="/predictions" className={linkClass}>
-            Lịch sử dự đoán
-          </NavLink>
-          <NavLink to="/models" className={linkClass}>
-            Mô hình
-          </NavLink>
-          {user?.role === "ADMIN" && (
-            <NavLink to="/users" className={linkClass}>
-              Người dùng
-            </NavLink>
-          )}
-        </nav>
-        <div className="mt-8 text-xs text-slate-400">
-          <div className="font-medium text-slate-200">{user?.full_name}</div>
-          <div>{user?.email}</div>
-          <div className="mt-1">{user?.role}</div>
+    <div className="min-h-screen lg:grid lg:grid-cols-[224px_minmax(0,1fr)] xl:grid-cols-[256px_minmax(0,1fr)]">
+      <a className="skip-link" href="#main-content">
+        Chuyển đến nội dung chính
+      </a>
+      <aside className="sticky top-0 hidden h-dvh flex-col overflow-y-auto bg-slate-900 p-5 text-white lg:flex">
+        {navigation}
+      </aside>
+      <div className="min-w-0">
+        <div className="flex items-center justify-between gap-3 border-b border-line bg-white px-4 py-3 lg:hidden">
+          <span className="text-sm font-semibold text-brand-900">
+            CR / Rủi ro tín dụng
+          </span>
           <button
-            className="mt-3 btn-ghost w-full text-slate-800"
+            ref={trigger}
+            type="button"
+            className="btn-secondary"
+            aria-haspopup="dialog"
+            aria-controls="navigation-drawer"
             onClick={() => {
-              logout();
-              navigate("/login");
+              previousOverflow.current = document.body.style.overflow;
+              document.body.style.overflow = "hidden";
+              drawer.current?.showModal();
             }}
           >
-            Đăng xuất
+            ☰ <span>Menu</span>
           </button>
         </div>
-      </aside>
-      <main className="p-6 space-y-4">
-        <Disclaimer />
-        <Outlet />
-      </main>
+        <main
+          ref={main}
+          id="main-content"
+          tabIndex={-1}
+          className="mx-auto min-w-0 max-w-screen-2xl space-y-6 p-4 pb-10 sm:p-6 lg:p-8"
+        >
+          <Disclaimer />
+          <Outlet />
+        </main>
+        <footer className="border-t border-line px-4 py-5 text-xs text-muted sm:px-6 lg:px-8">
+          Hệ thống hỗ trợ đánh giá rủi ro tín dụng · Niên luận KTPM
+        </footer>
+      </div>
+      <dialog
+        ref={drawer}
+        id="navigation-drawer"
+        aria-label="Menu điều hướng"
+        className="m-0 h-dvh max-h-none w-80 max-w-full border-0 bg-slate-900 p-5 text-white"
+        onClose={() => {
+          document.body.style.overflow = previousOverflow.current;
+          if (
+            drawer.current?.contains(document.activeElement) ||
+            document.activeElement === document.body
+          )
+            trigger.current?.focus();
+        }}
+        onKeyDown={(event) => {
+          if (event.key !== "Tab") return;
+          const controls = Array.from(
+            event.currentTarget.querySelectorAll<HTMLElement>(
+              "a[href], button:not(:disabled)",
+            ),
+          );
+          const first = controls[0];
+          const last = controls[controls.length - 1];
+          if (event.shiftKey && document.activeElement === first) {
+            event.preventDefault();
+            last?.focus();
+          } else if (!event.shiftKey && document.activeElement === last) {
+            event.preventDefault();
+            first?.focus();
+          }
+        }}
+        onClick={(event) => {
+          if (
+            event.target === drawer.current &&
+            event.clientX >= drawer.current.getBoundingClientRect().right
+          )
+            close();
+        }}
+      >
+        <div className="flex min-h-full flex-col">
+          <button
+            type="button"
+            autoFocus
+            className="btn mb-4 self-end border border-slate-600 text-white"
+            onClick={close}
+          >
+            Đóng menu ×
+          </button>
+          {navigation}
+        </div>
+      </dialog>
     </div>
   );
 }
